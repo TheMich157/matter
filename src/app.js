@@ -9,6 +9,7 @@ class GoveeApp {
     this.automationRunning = false;
     this.rules = [];
     this.lastColor = { r: 255, g: 0, b: 0 };
+    this.lastBrightness = 50;
 
     // runtime state
     this.currentPacket = null;
@@ -679,6 +680,7 @@ rgbArrToHex(arr) {
   async setBrightness(value) {
     try {
       await api.setDeviceBrightness(value);
+      this.lastBrightness = value;
       this.log(`Brightness → ${value}%`);
     } catch (error) {
       this.log(`Brightness error: ${error.message}`, "error");
@@ -800,8 +802,10 @@ async loadDynamicPresets() {
       if (!this.scenePlaying) break;
 
       const [r, g, b] = step.color || [255, 0, 0];
-      await this.setColor(r, g, b);
-      if (step.brightness != null) await this.setBrightness(step.brightness);
+      const brightness = step.brightness != null ? step.brightness : this.lastBrightness;
+      const transitionMs = step.transitionMs != null ? step.transitionMs : Math.min(step.ms || 300, 600);
+
+      await this.fadeToTarget({ r, g, b, brightness }, transitionMs);
       await new Promise((res) => setTimeout(res, step.ms || 300));
     }
 

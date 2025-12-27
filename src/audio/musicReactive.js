@@ -2,22 +2,33 @@ export class MusicReactive {
   constructor(app) {
     this.app = app;
     this.running = false;
+    this.stream = null;
   }
 
   async start() {
     if (this.running) return;
     this.running = true;
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    this.ctx = new AudioContext();
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.ctx = new AudioContext();
 
-    const src = this.ctx.createMediaStreamSource(stream);
-    this.analyser = this.ctx.createAnalyser();
-    this.analyser.fftSize = 512;
-    src.connect(this.analyser);
+      const src = this.ctx.createMediaStreamSource(this.stream);
+      this.analyser = this.ctx.createAnalyser();
+      this.analyser.fftSize = 512;
+      src.connect(this.analyser);
 
-    this.data = new Uint8Array(this.analyser.frequencyBinCount);
-    this.loop();
+      this.data = new Uint8Array(this.analyser.frequencyBinCount);
+      this.loop();
+    } catch (err) {
+      this.running = false;
+      this.stream = null;
+      if (this.ctx) {
+        try { this.ctx.close(); } catch (_) {}
+      }
+      this.app.log("Microphone access unavailable. Enable mic or choose another input device.", "error");
+      this.app.setSceneMsg?.("Microphone access unavailable.", "error");
+    }
   }
 
   async loop() {
@@ -45,5 +56,9 @@ export class MusicReactive {
   stop() {
     this.running = false;
     if (this.ctx) this.ctx.close();
+    if (this.stream) {
+      this.stream.getTracks().forEach((t) => t.stop());
+      this.stream = null;
+    }
   }
 }
