@@ -53,15 +53,8 @@ function resolveBackendPath() {
 
   const binaryName = process.platform === 'win32' ? 'govee-backend.exe' : 'govee-backend';
   const candidates = [
-    // electron-builder extraResources default target
-    path.join(process.resourcesPath, 'dist', binaryName),
-    // possible direct resource root
     path.join(process.resourcesPath, binaryName),
-    // unpacked app directory
-    path.join(__dirname, '..', 'dist', binaryName),
-    // one-folder PyInstaller output
-    path.join(process.resourcesPath, 'dist', 'govee-backend', binaryName),
-    path.join(__dirname, '..', 'dist', 'govee-backend', binaryName)
+    path.join(__dirname, '..', 'dist', binaryName)
   ];
 
   const found = candidates.find(candidate => fs.existsSync(candidate));
