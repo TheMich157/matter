@@ -24,6 +24,7 @@ venv/
 build/
 dist/
 *.spec
+!backend.spec
 
 # ======================
 # Node / Electron

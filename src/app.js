@@ -13,8 +13,10 @@ class GoveeApp {
     // runtime state
     this.currentPacket = null;
     this.scenePlaying = false;
+    this.updateState = "idle";
 
     this.initElements();
+    this.setupUpdaterUi();
     this.attachEventListeners();
 
     this.loadRules();
@@ -251,6 +253,11 @@ rgbArrToHex(arr) {
     this.discoverBtn = document.getElementById("discoverBtn");
     this.statusBtn = document.getElementById("statusBtn");
     this.statusIndicator = document.getElementById("statusIndicator");
+    this.updateBtn = document.getElementById("updateBtn");
+    this.updateStatus = document.getElementById("updateStatus");
+    this.versionLabel = document.getElementById("versionLabel");
+    this.updateProgress = document.getElementById("updateProgress");
+    this.updateProgressBar = document.getElementById("updateProgressBar");
 
     // Music system
     this.music = new MusicReactive(this);
@@ -315,26 +322,26 @@ rgbArrToHex(arr) {
     this.exportRulesBtn = document.getElementById("exportRulesBtn");
     this.importRulesBtn = document.getElementById("importRulesBtn");
 
-this.openSceneEditorBtn = document.getElementById("openSceneEditorBtn");
-this.sceneEditorModal = document.getElementById("sceneEditorModal");
-this.closeSceneEditorBtn = document.getElementById("closeSceneEditorBtn");
-this.sceneEditorTitle = document.getElementById("sceneEditorTitle");
+    this.openSceneEditorBtn = document.getElementById("openSceneEditorBtn");
+    this.sceneEditorModal = document.getElementById("sceneEditorModal");
+    this.closeSceneEditorBtn = document.getElementById("closeSceneEditorBtn");
+    this.sceneEditorTitle = document.getElementById("sceneEditorTitle");
 
-this.sceneNameInput = document.getElementById("sceneNameInput");
-this.sceneDefaultBrightness = document.getElementById("sceneDefaultBrightness");
-this.sceneLoopSelect = document.getElementById("sceneLoopSelect");
-this.sceneStepsList = document.getElementById("sceneStepsList");
-this.addSceneStepBtn = document.getElementById("addSceneStepBtn");
+    this.sceneNameInput = document.getElementById("sceneNameInput");
+    this.sceneDefaultBrightness = document.getElementById("sceneDefaultBrightness");
+    this.sceneLoopSelect = document.getElementById("sceneLoopSelect");
+    this.sceneStepsList = document.getElementById("sceneStepsList");
+    this.addSceneStepBtn = document.getElementById("addSceneStepBtn");
 
-this.previewSceneBtn = document.getElementById("previewSceneBtn");
-this.stopSceneBtn = document.getElementById("stopSceneBtn");
-this.saveSceneBtn = document.getElementById("saveSceneBtn");
-this.sceneEditorMsg = document.getElementById("sceneEditorMsg");
+    this.previewSceneBtn = document.getElementById("previewSceneBtn");
+    this.stopSceneBtn = document.getElementById("stopSceneBtn");
+    this.saveSceneBtn = document.getElementById("saveSceneBtn");
+    this.sceneEditorMsg = document.getElementById("sceneEditorMsg");
 
-// state for editor
-this.editingSceneId = null;
-this.editorSteps = [];
-this.userPresetsCache = null;
+    // state for editor
+    this.editingSceneId = null;
+    this.editorSteps = [];
+    this.userPresetsCache = null;
   }
 
   attachEventListeners() {
@@ -350,28 +357,28 @@ this.userPresetsCache = null;
         }
       });
     }
-// Scene Editor
-if (this.openSceneEditorBtn) {
-  this.openSceneEditorBtn.addEventListener("click", () => this.openSceneEditor());
-}
-if (this.closeSceneEditorBtn) {
-  this.closeSceneEditorBtn.addEventListener("click", () => this.closeSceneEditor());
-}
-if (this.addSceneStepBtn) {
-  this.addSceneStepBtn.addEventListener("click", () => {
-    this.editorSteps.push({ color: "#ff0000", brightness: 80, ms: 300 });
-    this.renderSceneSteps();
-  });
-}
-if (this.previewSceneBtn) {
-  this.previewSceneBtn.addEventListener("click", async () => this.previewEditorScene());
-}
-if (this.stopSceneBtn) {
-  this.stopSceneBtn.addEventListener("click", () => this.stopAllModes());
-}
-if (this.saveSceneBtn) {
-  this.saveSceneBtn.addEventListener("click", async () => this.saveEditorScene());
-}
+    // Scene Editor
+    if (this.openSceneEditorBtn) {
+      this.openSceneEditorBtn.addEventListener("click", () => this.openSceneEditor());
+    }
+    if (this.closeSceneEditorBtn) {
+      this.closeSceneEditorBtn.addEventListener("click", () => this.closeSceneEditor());
+    }
+    if (this.addSceneStepBtn) {
+      this.addSceneStepBtn.addEventListener("click", () => {
+        this.editorSteps.push({ color: "#ff0000", brightness: 80, ms: 300 });
+        this.renderSceneSteps();
+      });
+    }
+    if (this.previewSceneBtn) {
+      this.previewSceneBtn.addEventListener("click", async () => this.previewEditorScene());
+    }
+    if (this.stopSceneBtn) {
+      this.stopSceneBtn.addEventListener("click", () => this.stopAllModes());
+    }
+    if (this.saveSceneBtn) {
+      this.saveSceneBtn.addEventListener("click", async () => this.saveEditorScene());
+    }
 
     // Discovery
     if (this.discoverBtn) this.discoverBtn.addEventListener("click", () => this.showDiscoveryModal());
@@ -468,22 +475,22 @@ if (this.saveSceneBtn) {
     });
 
     // DIY Scene creator button
-   if (this.createSceneBtn) {
-  this.createSceneBtn.addEventListener("click", async () => {
-    try {
-      const scene = createScenePreset("My Scene", [
-        { color: [255, 0, 0], brightness: 80, ms: 300 },
-        { color: [0, 0, 255], brightness: 100, ms: 300 },
-      ]);
+    if (this.createSceneBtn) {
+      this.createSceneBtn.addEventListener("click", async () => {
+        try {
+          const scene = createScenePreset("My Scene", [
+            { color: [255, 0, 0], brightness: 80, ms: 300 },
+            { color: [0, 0, 255], brightness: 100, ms: 300 },
+          ]);
 
-      await saveScenePreset(scene);
-      await this.loadDynamicPresets();
-      this.log("DIY scene saved", "success");
-    } catch (e) {
-      this.showErrorDialog("Scene Save Failed", String(e?.message || e));
+          await saveScenePreset(scene);
+          await this.loadDynamicPresets();
+          this.log("DIY scene saved", "success");
+        } catch (e) {
+          this.showErrorDialog("Scene Save Failed", String(e?.message || e));
+        }
+      });
     }
-  });
-}
 
 
     // Music mode buttons (also stops scene)
@@ -513,6 +520,138 @@ if (this.saveSceneBtn) {
         }
         this.stopMusicBtn.disabled = true;
       });
+    }
+  }
+
+  setupUpdaterUi() {
+    if (this.updateBtn) {
+      this.updateBtn.addEventListener("click", () => this.onUpdateButtonClick());
+    }
+
+    if (this.versionLabel && window.electron?.getAppVersion) {
+      window.electron.getAppVersion().then((version) => {
+        this.versionLabel.textContent = `v${version}`;
+      });
+    } else if (this.versionLabel) {
+      this.versionLabel.textContent = "web";
+    }
+
+    if (window.electron?.onUpdateStatus) {
+      window.electron.onUpdateStatus((payload) => this.applyUpdateStatus(payload));
+    } else if (this.updateStatus) {
+      this.updateStatus.textContent = "Update checks available in the desktop app.";
+      this.updateStatus.classList.add("muted");
+    }
+
+    if (this.updateProgress) {
+      this.setUpdateProgress(null);
+    }
+  }
+
+  setUpdateMessage(text, type = "info") {
+    if (!this.updateStatus) return;
+    this.updateStatus.textContent = text || "";
+    this.updateStatus.dataset.state = type;
+  }
+
+  setUpdateProgress(percent) {
+    if (!this.updateProgress || !this.updateProgressBar) return;
+    if (percent == null) {
+      this.updateProgress.style.display = "none";
+      this.updateProgressBar.style.width = "0%";
+      return;
+    }
+    const value = Math.max(0, Math.min(100, Math.round(percent)));
+    this.updateProgress.style.display = "block";
+    this.updateProgressBar.style.width = `${value}%`;
+  }
+
+  async onUpdateButtonClick() {
+    if (!window.electron?.checkForUpdates) {
+      this.setUpdateMessage("Updates are only available in the packaged app.", "muted");
+      return;
+    }
+
+    if (this.updateState === "available") {
+      this.updateBtn.disabled = true;
+      this.updateBtn.textContent = "Downloading...";
+      await window.electron.downloadUpdate();
+      return;
+    }
+
+    if (this.updateState === "downloaded") {
+      this.updateBtn.disabled = true;
+      this.updateBtn.textContent = "Restarting...";
+      await window.electron.installUpdate();
+      return;
+    }
+
+    this.updateBtn.disabled = true;
+    this.updateBtn.textContent = "Checking...";
+    this.setUpdateMessage("Checking for updates...");
+    const result = await window.electron.checkForUpdates();
+    if (result?.status === "unavailable") {
+      this.applyUpdateStatus({ status: "unavailable" });
+    }
+  }
+
+  applyUpdateStatus(payload = {}) {
+    const status = payload.status || "idle";
+    this.updateState = status;
+
+    if (!this.updateBtn) return;
+
+    switch (status) {
+      case "checking":
+        this.updateBtn.disabled = true;
+        this.updateBtn.textContent = "Checking...";
+        this.setUpdateMessage("Checking for updates...");
+        this.setUpdateProgress(null);
+        break;
+      case "available":
+        this.updateBtn.disabled = false;
+        this.updateBtn.textContent = "Download Update";
+        this.setUpdateMessage(`Update ${payload.version || ""} available.`, "info");
+        this.setUpdateProgress(null);
+        break;
+      case "downloading": {
+        this.updateBtn.disabled = true;
+        this.updateBtn.textContent = "Downloading...";
+        const pct = payload.progress?.percent ?? 0;
+        this.setUpdateMessage(`Downloading update... ${pct ? pct.toFixed(1) : "0"}%`, "info");
+        this.setUpdateProgress(pct);
+        break;
+      }
+      case "downloaded":
+        this.updateBtn.disabled = false;
+        this.updateBtn.textContent = "Restart to Update";
+        this.setUpdateMessage("Update ready to install. Click to restart.", "ok");
+        this.setUpdateProgress(100);
+        break;
+      case "not-available":
+      case "no-update":
+        this.updateBtn.disabled = false;
+        this.updateBtn.textContent = "Check for Updates";
+        this.setUpdateMessage("You are on the latest version.", "ok");
+        this.setUpdateProgress(null);
+        break;
+      case "unavailable":
+        this.updateBtn.disabled = true;
+        this.updateBtn.textContent = "Check for Updates";
+        this.setUpdateMessage("Updates disabled in development builds.", "muted");
+        this.setUpdateProgress(null);
+        break;
+      case "error":
+        this.updateBtn.disabled = false;
+        this.updateBtn.textContent = "Retry";
+        this.setUpdateMessage(`Update error: ${payload.message || "Unknown error"}`, "error");
+        this.setUpdateProgress(null);
+        break;
+      default:
+        this.updateBtn.disabled = false;
+        this.updateBtn.textContent = "Check for Updates";
+        this.setUpdateProgress(null);
+        break;
     }
   }
 
