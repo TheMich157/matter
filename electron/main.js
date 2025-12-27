@@ -55,15 +55,8 @@ function resolveBackendPath() {
 
   const binaryName = process.platform === 'win32' ? 'govee-backend.exe' : 'govee-backend';
   const candidates = [
-    // electron-builder extraResources default target
-    path.join(process.resourcesPath, 'dist', binaryName),
-    // possible direct resource root
     path.join(process.resourcesPath, binaryName),
-    // unpacked app directory
-    path.join(__dirname, '..', 'dist', binaryName),
-    // one-folder PyInstaller output
-    path.join(process.resourcesPath, 'dist', 'govee-backend', binaryName),
-    path.join(__dirname, '..', 'dist', 'govee-backend', binaryName)
+    path.join(__dirname, '..', 'dist', binaryName)
   ];
 
   const found = candidates.find(candidate => fs.existsSync(candidate));
@@ -180,13 +173,6 @@ function setupAutoUpdater() {
     console.log('[UPDATE] Skipping auto-update in development');
     sendUpdateStatus({ status: 'unavailable', reason: 'development' });
     return;
-  }
-
-  if (githubToken) {
-    autoUpdater.requestHeaders = { Authorization: `token ${githubToken}` };
-    console.log('[UPDATE] Using GitHub token from environment for update checks');
-  } else {
-    console.log('[UPDATE] No GH_TOKEN/ELECTRON_GH_TOKEN set; assuming public releases');
   }
 
   autoUpdater.autoDownload = false;

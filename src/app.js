@@ -656,29 +656,6 @@ rgbArrToHex(arr) {
     }
   }
 
-  async fadeToTarget(target, durationMs = 0) {
-    const fromColor = this.lastColor || { r: 255, g: 0, b: 0 };
-    const fromBrightness = this.lastBrightness ?? 50;
-    const frames = Math.max(2, Math.round((durationMs || 0) / 50));
-
-    if (!durationMs || frames <= 2) {
-      await this.setColor(target.r, target.g, target.b);
-      if (target.brightness != null) await this.setBrightness(target.brightness);
-      return;
-    }
-
-    for (let i = 1; i <= frames; i++) {
-      const t = i / frames;
-      const r = Math.round(fromColor.r + (target.r - fromColor.r) * t);
-      const g = Math.round(fromColor.g + (target.g - fromColor.g) * t);
-      const b = Math.round(fromColor.b + (target.b - fromColor.b) * t);
-      const brightness = Math.round(fromBrightness + (target.brightness - fromBrightness) * t);
-      await this.setColor(r, g, b);
-      await this.setBrightness(brightness);
-      await new Promise((res) => setTimeout(res, durationMs / frames));
-    }
-  }
-
   // -------------------------
   // Device Control
   // -------------------------
