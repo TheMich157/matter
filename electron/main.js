@@ -42,47 +42,62 @@ function createWindow() {
   });
 }
 
+function resolveBackendPath() {
+  if (isDev) {
+    const scriptPath = path.join(__dirname, '../app_backend.py');
+    if (!fs.existsSync(scriptPath)) {
+      throw new Error(`Backend file not found at ${scriptPath}`);
+    }
+    return { path: scriptPath, type: 'script' };
+  }
+
+  const binaryName = process.platform === 'win32' ? 'govee-backend.exe' : 'govee-backend';
+  const candidates = [
+    // electron-builder extraResources default target
+    path.join(process.resourcesPath, 'dist', binaryName),
+    // possible direct resource root
+    path.join(process.resourcesPath, binaryName),
+    // unpacked app directory
+    path.join(__dirname, '..', 'dist', binaryName),
+    // one-folder PyInstaller output
+    path.join(process.resourcesPath, 'dist', 'govee-backend', binaryName),
+    path.join(__dirname, '..', 'dist', 'govee-backend', binaryName)
+  ];
+
+  const found = candidates.find(candidate => fs.existsSync(candidate));
+  if (!found) {
+    throw new Error(`Backend executable not found (checked: ${candidates.join(', ')})`);
+  }
+
+  return { path: found, type: 'binary' };
+}
+
 // Start Flask backend
 function startBackend() {
-  // Determine backend exe path based on environment
-  let backendPath;
-  
-  if (isDev) {
-    // Development: use Python script directly
-    backendPath = path.join(__dirname, '../app_backend.py');
-    if (!fs.existsSync(backendPath)) {
-      console.error('[BACKEND] File not found:', backendPath);
-      return Promise.reject('Backend file not found');
-    }
-  } else {
-    // Production: use bundled exe
-    backendPath = path.join(process.resourcesPath, 'govee-backend.exe');
-    if (!fs.existsSync(backendPath)) {
-      // Fallback: try in dist folder
-      backendPath = path.join(__dirname, '../dist/govee-backend.exe');
-      if (!fs.existsSync(backendPath)) {
-        console.error('[BACKEND] Bundled exe not found:', backendPath);
-        return Promise.reject('Backend executable not found');
-      }
-    }
+  let backendTarget;
+  try {
+    backendTarget = resolveBackendPath();
+  } catch (err) {
+    console.error('[BACKEND] Resolve error:', err);
+    return Promise.reject(err);
   }
-  
+
   return new Promise((resolve, reject) => {
-    console.log('[BACKEND] Starting:', backendPath);
+    console.log('[BACKEND] Starting:', backendTarget.path);
     
-    if (isDev) {
+    if (backendTarget.type === 'script') {
       // Development: spawn Python directly
       const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
-      backendProcess = spawn(pythonCmd, [backendPath], {
+      backendProcess = spawn(pythonCmd, [backendTarget.path], {
         cwd: path.join(__dirname, '..'),
         stdio: 'inherit',
         detached: false,
         shell: process.platform === 'win32'
       });
     } else {
-      // Production: spawn bundled exe
-      backendProcess = spawn(backendPath, [], {
-        cwd: path.dirname(backendPath),
+      // Production: spawn bundled binary
+      backendProcess = spawn(backendTarget.path, [], {
+        cwd: path.dirname(backendTarget.path),
         stdio: 'inherit',
         detached: false
       });
@@ -134,32 +149,81 @@ function startBackend() {
   });
 }
 
+function sendUpdateStatus(payload) {
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status', payload);
+  }
+}
+
+async function checkForUpdatesNow() {
+  if (isDev) {
+    sendUpdateStatus({ status: 'unavailable', reason: 'development' });
+    return { status: 'unavailable' };
+  }
+
+  try {
+    sendUpdateStatus({ status: 'checking' });
+    await autoUpdater.checkForUpdates();
+    return { status: 'checking' };
+  } catch (err) {
+    console.error('[UPDATE] Error checking for updates:', err);
+    sendUpdateStatus({ status: 'error', message: err.message });
+    return { status: 'error', message: err.message };
+  }
+}
+
 // Setup auto-updater
 function setupAutoUpdater() {
   if (isDev) {
     console.log('[UPDATE] Skipping auto-update in development');
+    sendUpdateStatus({ status: 'unavailable', reason: 'development' });
     return;
   }
 
-  autoUpdater.checkForUpdatesAndNotify();
-  
+  autoUpdater.autoDownload = false;
+
+  autoUpdater.on('checking-for-update', () => {
+    console.log('[UPDATE] Checking for updates');
+    sendUpdateStatus({ status: 'checking' });
+  });
+
   autoUpdater.on('update-available', (info) => {
     console.log('[UPDATE] Update available:', info.version);
     updateAvailable = true;
+    sendUpdateStatus({ status: 'available', version: info.version, releaseDate: info.releaseDate });
     if (mainWindow) {
       dialog.showMessageBox(mainWindow, {
         type: 'info',
         title: 'Update Available',
         message: `Govee LAN Controller ${info.version} is available`,
-        detail: 'The new version will be downloaded in the background. Restart the app to apply.',
+        detail: 'Click "Download Update" to start downloading.',
         buttons: ['OK']
       });
     }
   });
 
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('[UPDATE] No updates available');
+    updateAvailable = false;
+    sendUpdateStatus({ status: 'not-available', current: app.getVersion(), info });
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    sendUpdateStatus({
+      status: 'downloading',
+      progress: {
+        percent: progress.percent,
+        transferred: progress.transferred,
+        total: progress.total,
+        bytesPerSecond: progress.bytesPerSecond
+      }
+    });
+  });
+
   autoUpdater.on('update-downloaded', (info) => {
     console.log('[UPDATE] Update downloaded:', info.version);
     updateAvailable = true;
+    sendUpdateStatus({ status: 'downloaded', version: info.version });
     if (mainWindow) {
       dialog.showMessageBox(mainWindow, {
         type: 'info',
@@ -178,13 +242,46 @@ function setupAutoUpdater() {
 
   autoUpdater.on('error', (err) => {
     console.error('[UPDATE] Error:', err);
+    sendUpdateStatus({ status: 'error', message: err.message });
   });
 
-  // Check for updates every hour
+  // Initial + hourly checks
+  checkForUpdatesNow();
   setInterval(() => {
-    autoUpdater.checkForUpdates();
+    checkForUpdatesNow();
   }, 3600000);
 }
+
+ipcMain.handle('update:check', async () => {
+  return checkForUpdatesNow();
+});
+
+ipcMain.handle('update:download', async () => {
+  if (isDev) return { status: 'unavailable', reason: 'development' };
+  if (!updateAvailable) {
+    sendUpdateStatus({ status: 'no-update' });
+    return { status: 'no-update' };
+  }
+
+  try {
+    sendUpdateStatus({ status: 'downloading' });
+    await autoUpdater.downloadUpdate();
+    return { status: 'downloading' };
+  } catch (err) {
+    console.error('[UPDATE] Download failed:', err);
+    sendUpdateStatus({ status: 'error', message: err.message });
+    return { status: 'error', message: err.message };
+  }
+});
+
+ipcMain.handle('update:install', () => {
+  if (!updateAvailable) {
+    sendUpdateStatus({ status: 'no-update' });
+    return { status: 'no-update' };
+  }
+  autoUpdater.quitAndInstall();
+  return { status: 'installing' };
+});
 
 const PRESETS_OWNER = process.env.PRESETS_OWNER || "YOUR_GITHUB_USERNAME";
 const PRESETS_REPO  = process.env.PRESETS_REPO  || "govee-lan-controller";
@@ -282,7 +379,7 @@ app.on('before-quit', () => {
       if (process.platform === 'win32') {
         require('child_process').execSync(`taskkill /PID ${backendProcess.pid} /T /F`, { stdio: 'ignore' });
       } else {
-        process.kill(-backendProcess.pid);
+        backendProcess.kill('SIGTERM');
       }
     } catch (e) {
       console.error('[BACKEND] Error killing process:', e.message);
@@ -312,7 +409,7 @@ function createMenu() {
         {
           label: 'Check for Updates',
           click: () => {
-            autoUpdater.checkForUpdatesAndNotify();
+            checkForUpdatesNow();
           }
         },
         { type: 'separator' },
@@ -372,4 +469,3 @@ ipcMain.handle('import-rules', async (event) => {
 });
 
 ipcMain.handle('get-app-version', () => app.getVersion());
-

@@ -6,9 +6,10 @@ Embeds GoveeLAN library
 """
 
 import json
-import socket
-import threading
 import os
+import socket
+import sys
+import threading
 import time
 from datetime import datetime
 from flask import Flask, jsonify, request, send_from_directory
@@ -19,6 +20,13 @@ CONTROL_PORT = 4003
 MCAST_GRP = "239.255.255.250"
 SCAN_PORT = 4001
 RECV_PORT = 4002
+
+BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(sys.argv[0])))
+STATIC_DIR = os.path.join(BASE_DIR, "src")
+DEFAULT_RULES_FILE = os.path.join(BASE_DIR, "rules.json")
+DATA_DIR = os.path.join(os.path.expanduser("~"), ".govee-lan-controller")
+os.makedirs(DATA_DIR, exist_ok=True)
+RULES_PATH = os.path.join(DATA_DIR, "rules.json")
 
 # -------------------------
 # Packet Monitor
@@ -181,7 +189,7 @@ class GoveeLAN:
 # -------------------------
 # Flask App
 # -------------------------
-app = Flask(__name__, static_folder='src', static_url_path='')
+app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
 CORS(app)
 
 govee = GoveeLAN(DEFAULT_IP)
@@ -555,15 +563,15 @@ def automation_status():
 def save_rules_to_file():
     try:
         # Write atomically: write to temp file then replace
-        tmp = "rules.json.tmp"
+        tmp = os.path.join(DATA_DIR, "rules.json.tmp")
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump({"device_ip": govee.ip, "rules": rules}, f, indent=2)
         try:
-            os.replace(tmp, "rules.json")
+            os.replace(tmp, RULES_PATH)
         except Exception:
             # Fallback if replace is not available
-            os.remove("rules.json") if os.path.exists("rules.json") else None
-            os.rename(tmp, "rules.json")
+            os.remove(RULES_PATH) if os.path.exists(RULES_PATH) else None
+            os.rename(tmp, RULES_PATH)
     except Exception as e:
         print(f"Error saving rules: {e}")
 
@@ -571,7 +579,15 @@ def save_rules_to_file():
 def load_rules_from_file():
     global rules
     try:
-        with open("rules.json", "r", encoding="utf-8") as f:
+        if not os.path.exists(RULES_PATH) and os.path.exists(DEFAULT_RULES_FILE):
+            try:
+                with open(DEFAULT_RULES_FILE, "r", encoding="utf-8") as default_rules, \
+                        open(RULES_PATH, "w", encoding="utf-8") as dest:
+                    json.dump(json.load(default_rules), dest, indent=2)
+            except Exception as copy_err:
+                print(f"Failed to seed default rules: {copy_err}")
+
+        with open(RULES_PATH, "r", encoding="utf-8") as f:
             cfg = json.load(f)
             govee.set_ip(cfg.get("device_ip", DEFAULT_IP))
             rules = cfg.get("rules", [])
@@ -640,12 +656,12 @@ def set_rules():
 # Serve static files
 @app.route('/')
 def index():
-    return send_from_directory('src', 'index.html')
+    return send_from_directory(STATIC_DIR, 'index.html')
 
 
 @app.route('/<path:path>')
 def static_files(path):
-    return send_from_directory('src', path)
+    return send_from_directory(STATIC_DIR, path)
 
 
 if __name__ == "__main__":
