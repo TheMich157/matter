@@ -1,6 +1,6 @@
 {
   "name": "govee-lan-controller",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "Professional local control for Govee LAN lights - No cloud required",
   "author": "TheMich157",
   "license": "MIT",
@@ -74,5 +74,11 @@
     "provider": "github",
     "owner": "TheMich157",
     "repo": "matter"
+  },
+  "extraResources": [
+  {
+    "from": "dist/govee-backend.exe",
+    "to": "govee-backend.exe"
   }
+]
 }
