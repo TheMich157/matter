@@ -46,17 +46,17 @@ export class MusicReactive {
       this.data = new Uint8Array(this.analyser.frequencyBinCount);
       this.loop();
 
-      this.app.log(`Music mode: capturing system audio (${src.name})`, "success");
-    } catch (err) {
-      this.running = false;
-      this.cleanup();
+     this.app.log(`Music mode: capturing system audio (${src.name})`, "success");
+  } catch (err) {
+    this.running = false;
+    this.cleanup();
 
-      this.app.log(
-        "System audio capture failed. In Windows you may need to select a screen source that supports audio.",
-        "error"
-      );
-    }
+    this.app.log(
+      `System audio capture failed: ${err?.message || err}. In Windows you may need to select a screen source that supports audio.`,
+      "error"
+    );
   }
+}
 
   async loop() {
     if (!this.running || !this.analyser) return;
