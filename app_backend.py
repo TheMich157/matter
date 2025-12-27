@@ -21,7 +21,10 @@ MCAST_GRP = "239.255.255.250"
 SCAN_PORT = 4001
 RECV_PORT = 4002
 
-BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+
+BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(sys.argv[0])))
+
+
 STATIC_DIR = os.path.join(BASE_DIR, "src")
 DEFAULT_RULES_FILE = os.path.join(BASE_DIR, "rules.json")
 DATA_DIR = os.path.join(os.path.expanduser("~"), ".govee-lan-controller")
