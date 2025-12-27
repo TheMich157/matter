@@ -17,7 +17,9 @@
                 </div>
                 <div class="header-controls">
                     <label for="ipInput" class="visually-hidden">Device IP</label>
-                    <input type="text" id="ipInput" placeholder="192.168.1.66" class="ip-input">                    <button id="discoverBtn" class="btn btn-status" title="Scan network for devices">🔍</button>                    <button id="statusBtn" class="btn btn-status">Check</button>
+                    <input type="text" id="ipInput" placeholder="192.168.1.66" class="ip-input">
+                    <button id="discoverBtn" class="btn btn-status" title="Scan network for devices">🔍</button>
+                    <button id="statusBtn" class="btn btn-status">Check</button>
                     <div id="statusIndicator" class="status-indicator" title="connection status">●</div>
                 </div>
             </div>
@@ -77,6 +79,7 @@
                 <!-- Quick Presets -->
                 <div class="card">
                     <h3>Quick Presets</h3>
+
                     <div class="presets-grid">
                         <button class="btn btn-preset" data-color="255,0,0" style="--color: #FF0000;">
                             <span class="swatch" style="background: #FF0000;"></span> Red
@@ -97,6 +100,18 @@
                             <span class="swatch" style="background: #00DCFF;"></span> Cyan
                         </button>
                     </div>
+
+                    <!-- NEW: DIY + Music controls -->
+                    <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                        <button id="createScene" class="btn btn-small btn-secondary">+ Create Scene</button>
+                        <button id="musicMode" class="btn btn-small">🎵 Music Mode</button>
+                        <button id="stopMusic" class="btn btn-small btn-secondary">⏹ Stop</button>
+                    </div>
+
+                    <!-- Optional helper text -->
+                    <p style="margin-top:10px; color: var(--muted); font-size: 12px;">
+                        Tip: Create a DIY scene preset, or start music-reactive mode.
+                    </p>
                 </div>
 
                 <!-- Network Command Monitor -->
@@ -136,7 +151,7 @@
                 <!-- Automation -->
                 <div class="card automation-card">
                     <h3>Automation (Daily)</h3>
-                    
+
                     <div class="rule-input">
                         <input type="time" id="ruleTime" value="18:00" class="time-input">
                         <select id="ruleAction" class="action-select">
@@ -183,6 +198,7 @@
     </div>
 
     <script src="api.js"></script>
-    <script src="app.js"></script>
+    <!-- IMPORTANT: app.js uses imports, so it must be a module -->
+    <script type="module" src="app.js"></script>
 </body>
 </html>
