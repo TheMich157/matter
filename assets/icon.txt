@@ -1,0 +1,15 @@
+# Application Icon Configuration
+# 
+# For a custom icon, replace this file with a 512x512 PNG image
+# The build system will automatically convert it to ICO format for Windows
+#
+# Options:
+# 1. Create a 512x512 PNG image and save as assets/icon.png
+# 2. Or use an online PNG to ICO converter
+# 3. Build system will auto-generate on next build
+#
+# Icon should have:
+# - 512x512 resolution
+# - PNG format
+# - Transparent background (recommended)
+# - Recognizable at small sizes (16x16, 32x32)

@@ -1,0 +1,77 @@
+{
+  "name": "govee-lan-controller",
+  "version": "1.0.0",
+  "description": "Professional local control for Govee LAN lights - No cloud required",
+  "author": "Govee Controller Contributors",
+  "license": "MIT",
+  "main": "electron/main.js",
+  "homepage": "./",
+  "scripts": {
+    "dev": "electron .",
+    "start-backend": "python app_backend.py",
+    "start": "python app_backend.py",
+    "build": "electron-builder",
+    "dist": "npm run build -- --win --publish never",
+    "pack": "electron-builder --dir"
+  },
+  "dependencies": {
+    "electron-is-dev": "^2.0.0",
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "build": {
+    "appId": "com.govee.lancontroller",
+    "extraResources": [
+    { "from": "dist/govee-backend.exe", "to": "dist/govee-backend.exe" }
+  ],
+    "productName": "Govee LAN Controller",
+    "files": [
+      "electron/**/*",
+      "src/**/*",
+      "dist/govee-backend.exe",
+      "dist/govee-backend"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "certificateFile": null,
+      "certificatePassword": null,
+      "signingHashAlgorithms": [
+        "sha256"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Govee LAN Controller"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}.${ext}"
+    }
+  },
+  "publish": {
+    "provider": "github",
+    "owner": "TheMich157",
+    "repo": "govee-lan-controller"
+  }
+}

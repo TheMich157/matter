@@ -1,0 +1,79 @@
+# ======================
+# OS / Editor bordel
+# ======================
+.DS_Store
+Thumbs.db
+*.log
+
+.vscode/
+.idea/
+
+# ======================
+# Python
+# ======================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+.venv/
+env/
+venv/
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# ======================
+# Node / Electron
+# ======================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Electron build output
+out/
+release/
+electron/dist/
+electron/out/
+
+# ======================
+# Frontend build
+# ======================
+dist/
+.cache/
+
+# ======================
+# Secrets / configs
+# ======================
+.env
+.env.local
+.env.production
+
+# ======================
+# Runtime / temp
+# ======================
+*.tmp
+*.temp
+*.bak
+
+# ======================
+# Generated assets
+# ======================
+assets/generated/
+assets/cache/
+
+# ======================
+# Test outputs
+# ======================
+coverage/
+test-results/
+
+# ======================
+# Custom (tvoje skripty)
+# ======================
+*.exe
+*.msi
+*.zip

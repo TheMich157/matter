@@ -1,0 +1,17 @@
+{
+  "version": 3,
+  "updatedAt": "2025-12-27",
+  "presets": [
+    { "id": "sunset", "name": "Sunset", "type": "static", "color": [255, 90, 0], "brightness": 80 },
+    {
+      "id": "party-wave",
+      "name": "Party Wave",
+      "type": "scene",
+      "steps": [
+        { "color": [255,0,0], "brightness": 100, "ms": 300 },
+        { "color": [0,255,0], "brightness": 100, "ms": 300 },
+        { "color": [0,0,255], "brightness": 100, "ms": 300 }
+      ]
+    }
+  ]
+}

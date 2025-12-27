@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Govee LAN Controller</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="brand">
+                    <h1>🔆Govee LAN</h1>
+                    <p class="subtitle" id="deviceSubtitle">Local controller — fast and private</p>
+                </div>
+                <div class="header-controls">
+                    <label for="ipInput" class="visually-hidden">Device IP</label>
+                    <input type="text" id="ipInput" placeholder="192.168.1.66" class="ip-input">                    <button id="discoverBtn" class="btn btn-status" title="Scan network for devices">🔍</button>                    <button id="statusBtn" class="btn btn-status">Check</button>
+                    <div id="statusIndicator" class="status-indicator" title="connection status">●</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Container -->
+        <div class="container">
+            <!-- Left Panel: Controls -->
+            <section class="panel left-panel">
+                <h2>Controls</h2>
+
+                <!-- Power Control -->
+                <div class="card power-card">
+                    <div class="power-buttons">
+                        <button id="onBtn" class="btn btn-power btn-on">
+                            <span>●</span> ON
+                        </button>
+                        <button id="offBtn" class="btn btn-power btn-off">
+                            <span>●</span> OFF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Brightness -->
+                <div class="card">
+                    <label>Brightness</label>
+                    <div class="brightness-control">
+                        <input type="range" id="brightnessSlider" min="1" max="100" value="50" class="slider">
+                        <span id="brightnessValue" class="value">50%</span>
+                    </div>
+                </div>
+
+                <!-- Color Picker -->
+                <div class="card">
+                    <label>Color</label>
+                    <div class="color-control">
+                        <input type="color" id="colorPicker" value="#FF0000" class="color-input">
+                        <button id="applyColorBtn" class="btn btn-small">Apply</button>
+                    </div>
+                    <div class="rgb-inputs">
+                        <input type="number" id="rInput" min="0" max="255" value="255" placeholder="R">
+                        <input type="number" id="gInput" min="0" max="255" value="0" placeholder="G">
+                        <input type="number" id="bInput" min="0" max="255" value="0" placeholder="B">
+                        <button id="applyRgbBtn" class="btn btn-small">Apply RGB</button>
+                    </div>
+                </div>
+
+                <!-- Log -->
+                <div class="card log-card">
+                    <label>Log</label>
+                    <div id="logBox" class="log-box"></div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Presets & Automation -->
+            <section class="panel right-panel">
+                <!-- Quick Presets -->
+                <div class="card">
+                    <h3>Quick Presets</h3>
+                    <div class="presets-grid">
+                        <button class="btn btn-preset" data-color="255,0,0" style="--color: #FF0000;">
+                            <span class="swatch" style="background: #FF0000;"></span> Red
+                        </button>
+                        <button class="btn btn-preset" data-color="0,255,0" style="--color: #00FF00;">
+                            <span class="swatch" style="background: #00FF00;"></span> Green
+                        </button>
+                        <button class="btn btn-preset" data-color="0,0,255" style="--color: #0000FF;">
+                            <span class="swatch" style="background: #0000FF;"></span> Blue
+                        </button>
+                        <button class="btn btn-preset" data-color="255,180,120" style="--color: #FFB478;">
+                            <span class="swatch" style="background: #FFB478;"></span> Warm
+                        </button>
+                        <button class="btn btn-preset" data-color="160,60,255" style="--color: #A03CFF;">
+                            <span class="swatch" style="background: #A03CFF;"></span> Purple
+                        </button>
+                        <button class="btn btn-preset" data-color="0,220,255" style="--color: #00DCFF;">
+                            <span class="swatch" style="background: #00DCFF;"></span> Cyan
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Network Command Monitor -->
+                <div class="card">
+                    <h3>Network Monitor</h3>
+                    <div class="command-monitor">
+                        <div class="monitor-header">
+                            <span class="monitor-label">Commands to device:</span>
+                            <button id="clearMonitorBtn" class="btn btn-small btn-secondary">Clear</button>
+                        </div>
+                        <div id="commandLog" class="command-log"></div>
+                    </div>
+                </div>
+
+                <!-- Packet Inspector -->
+                <div class="card">
+                    <div class="packet-header">
+                        <h3>UDP Packets</h3>
+                        <button id="refreshPacketsBtn" class="btn btn-small btn-secondary">Refresh</button>
+                        <button id="clearPacketsBtn" class="btn btn-small btn-secondary">Clear</button>
+                    </div>
+                    <div class="packet-display">
+                        <div id="packetList" class="packet-list"></div>
+                        <div id="packetDetail" class="packet-detail" style="display:none;">
+                            <button id="backPacketBtn" class="btn btn-small btn-secondary">← Back</button>
+                            <div class="packet-tabs">
+                                <button class="packet-tab-btn active" data-tab="json">JSON</button>
+                                <button class="packet-tab-btn" data-tab="raw">Raw</button>
+                                <button class="packet-tab-btn" data-tab="hex">Hex</button>
+                                <button class="packet-tab-btn" data-tab="analysis">Analysis</button>
+                            </div>
+                            <div id="packetContent" class="packet-content"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Automation -->
+                <div class="card automation-card">
+                    <h3>Automation (Daily)</h3>
+                    
+                    <div class="rule-input">
+                        <input type="time" id="ruleTime" value="18:00" class="time-input">
+                        <select id="ruleAction" class="action-select">
+                            <option value="on">ON</option>
+                            <option value="off">OFF</option>
+                            <option value="brightness">Brightness</option>
+                            <option value="rgb">RGB</option>
+                        </select>
+                        <input type="text" id="ruleValue" placeholder="Value" class="value-input">
+                        <button id="addRuleBtn" class="btn btn-small btn-add">+</button>
+                    </div>
+
+                    <ul id="rulesList" class="rules-list"></ul>
+
+                    <div class="automation-buttons">
+                        <button id="startAutoBtn" class="btn btn-auto">Start</button>
+                        <button id="exportRulesBtn" class="btn btn-small btn-secondary">Export</button>
+                        <button id="importRulesBtn" class="btn btn-small btn-secondary">Import</button>
+                        <button id="saveRulesBtn" class="btn btn-small">Save</button>
+                        <button id="loadRulesBtn" class="btn btn-small">Load</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Device Discovery Modal -->
+        <div id="discoveryModal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Scan for Govee Devices</h2>
+                    <button id="closeDiscoveryBtn" class="btn btn-small btn-secondary">✕</button>
+                </div>
+                <div class="modal-body">
+                    <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">
+                        Searching your network for Govee LAN devices...
+                    </p>
+                    <div id="discoveryStatus" class="discovery-status">
+                        <button id="scanBtn" class="btn btn-auto">Start Scan</button>
+                    </div>
+                    <div id="deviceList" class="device-list" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
