@@ -7,6 +7,7 @@ const { autoUpdater } = require('electron-updater');
 const https = require("https");
 
 const githubToken = process.env.GH_TOKEN || process.env.ELECTRON_GH_TOKEN || null;
+const UPDATE_USER_AGENT = "GoveeLANController-Updater";
 
 
 let mainWindow;
@@ -172,6 +173,27 @@ function setupAutoUpdater() {
   if (isDev) {
     console.log('[UPDATE] Skipping auto-update in development');
     sendUpdateStatus({ status: 'unavailable', reason: 'development' });
+    return;
+  }
+    try {
+    autoUpdater.requestHeaders = githubToken
+      ? {
+          Authorization: `token ${githubToken}`,
+          "User-Agent": UPDATE_USER_AGENT
+        }
+      : { "User-Agent": UPDATE_USER_AGENT };
+
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'TheMich157',
+      repo: 'matter',
+      protocol: 'https:'
+    });
+
+    console.log(`[UPDATE] Feed configured for GitHub repo: TheMich157/matter${githubToken ? ' (token auth)' : ''}`);
+  } catch (err) {
+    console.error('[UPDATE] Failed to configure auto-update feed:', err);
+    sendUpdateStatus({ status: 'error', message: 'Update feed misconfigured. Please check your internet connection or token.' });
     return;
   }
 
