@@ -11,7 +11,7 @@
     "start-backend": "python app_backend.py",
     "start": "python app_backend.py",
     "build": "electron-builder",
-    "dist": "npm run build -- --win --publish never",
+    "dist": "electron-builder --win --publish always",
     "pack": "electron-builder --dir"
   },
   "dependencies": {
@@ -24,41 +24,44 @@
   },
   "build": {
     "appId": "com.govee.lancontroller",
-    "extraResources": [
-      { "from": "dist/govee-backend.exe", "to": "dist/govee-backend.exe" },
-      { "from": "dist/govee-backend", "to": "dist/govee-backend" }
-    ],
     "productName": "Govee LAN Controller",
-    "files": [
-      "electron/**/*",
-      "src/**/*",
-      "dist/govee-backend.exe",
-      "dist/govee-backend"
-    ],
     "directories": {
       "buildResources": "assets"
     },
+
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "TheMich157",
+        "repo": "matter",
+        "releaseType": "release"
+      }
+    ],
+
+    "files": [
+      "electron/**/*",
+      "src/**/*"
+    ],
+
+    "extraResources": [
+      {
+        "from": "dist/govee-backend.exe",
+        "to": "govee-backend.exe"
+      },
+      {
+        "from": "dist/govee-backend",
+        "to": "govee-backend"
+      }
+    ],
+
     "win": {
       "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
       ],
-      "certificateFile": null,
-      "certificatePassword": null,
-      "signingHashAlgorithms": [
-        "sha256"
-      ]
+      "signingHashAlgorithms": ["sha256"]
     },
+
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
@@ -66,19 +69,9 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Govee LAN Controller"
     },
+
     "portable": {
       "artifactName": "${productName}-${version}.${ext}"
     }
-  },
-  "publish": {
-    "provider": "github",
-    "owner": "TheMich157",
-    "repo": "matter"
-  },
-  "extraResources": [
-  {
-    "from": "dist/govee-backend.exe",
-    "to": "govee-backend.exe"
   }
-]
 }
