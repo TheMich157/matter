@@ -88,6 +88,12 @@ try {
 
         if (-not $backendExe) { Fail "Backend exe not found in dist/" }
 
+        # Ensure a flat copy exists for electron-builder extraResources
+        $flatBackend = Join-Path $distDir "govee-backend.exe"
+        if ($backendExe -ne $flatBackend) {
+            Copy-Item $backendExe $flatBackend -Force
+        }
+
         $backendSize = [math]::Round((Get-Item $backendExe).Length / 1MB, 1)
         Ok ("OK: Backend built (" + $backendSize + " MB)")
 
