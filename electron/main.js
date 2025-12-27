@@ -6,6 +6,8 @@ const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
 const https = require("https");
 
+const githubToken = process.env.GH_TOKEN || process.env.ELECTRON_GH_TOKEN || null;
+
 
 let mainWindow;
 let backendProcess;
