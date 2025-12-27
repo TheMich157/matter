@@ -12,12 +12,15 @@ class GoveeApp {
 
     // runtime state
     this.currentPacket = null;
+    this.scenePlaying = false;
 
     this.initElements();
     this.attachEventListeners();
 
     this.loadRules();
     this.loadDynamicPresets();
+  
+    
 
     // Wait for backend to be ready before making API calls
     setTimeout(() => {
@@ -26,6 +29,221 @@ class GoveeApp {
       this.loadPackets();
     }, 1500);
   }
+setSceneMsg(text, type = "") {
+  if (!this.sceneEditorMsg) return;
+  this.sceneEditorMsg.className = "scene-msg " + (type || "");
+  this.sceneEditorMsg.textContent = text || "";
+}
+
+openSceneEditor(existingScene = null) {
+  if (!this.sceneEditorModal) return;
+
+  this.setSceneMsg("");
+
+  if (existingScene) {
+    this.editingSceneId = existingScene.id || null;
+    if (this.sceneEditorTitle) this.sceneEditorTitle.textContent = "Edit Scene";
+    if (this.sceneNameInput) this.sceneNameInput.value = existingScene.name || "";
+    if (this.sceneDefaultBrightness) this.sceneDefaultBrightness.value =
+      existingScene.defaultBrightness != null ? String(existingScene.defaultBrightness) : "";
+    if (this.sceneLoopSelect) this.sceneLoopSelect.value = existingScene.loop ? "on" : "off";
+
+    this.editorSteps = (existingScene.steps || []).map(s => ({
+      color: this.rgbArrToHex(s.color || [255,0,0]),
+      brightness: s.brightness ?? 80,
+      ms: s.ms ?? 300
+    }));
+  } else {
+    this.editingSceneId = null;
+    if (this.sceneEditorTitle) this.sceneEditorTitle.textContent = "New Scene";
+    if (this.sceneNameInput) this.sceneNameInput.value = "";
+    if (this.sceneDefaultBrightness) this.sceneDefaultBrightness.value = "";
+    if (this.sceneLoopSelect) this.sceneLoopSelect.value = "off";
+
+    this.editorSteps = [
+      { color: "#ff0000", brightness: 80, ms: 300 },
+      { color: "#0000ff", brightness: 100, ms: 300 }
+    ];
+  }
+
+  this.renderSceneSteps();
+  this.sceneEditorModal.style.display = "flex";
+}
+
+closeSceneEditor() {
+  if (!this.sceneEditorModal) return;
+  this.sceneEditorModal.style.display = "none";
+}
+
+renderSceneSteps() {
+  if (!this.sceneStepsList) return;
+  this.sceneStepsList.innerHTML = "";
+
+  if (!this.editorSteps.length) {
+    this.sceneStepsList.innerHTML = `<div style="color: var(--muted); font-size: 12px;">No steps yet.</div>`;
+    return;
+  }
+
+  this.editorSteps.forEach((step, idx) => {
+    const wrap = document.createElement("div");
+    wrap.className = "scene-step";
+
+    wrap.innerHTML = `
+      <div class="scene-step-top">
+        <div class="scene-step-title">Step #${idx + 1}</div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-small btn-secondary" data-act="up">↑</button>
+          <button class="btn btn-small btn-secondary" data-act="down">↓</button>
+          <button class="btn btn-small" style="background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color:#ef4444;" data-act="del">Delete</button>
+        </div>
+      </div>
+
+      <div class="scene-step-grid">
+        <input type="color" value="${step.color}">
+        <input type="number" min="1" max="100" value="${step.brightness}" placeholder="Brightness">
+        <input type="number" min="50" max="60000" value="${step.ms}" placeholder="ms">
+        <button class="btn btn-small btn-secondary" data-act="test">Test step</button>
+      </div>
+    `;
+
+    const colorInput = wrap.querySelector('input[type="color"]');
+    const bInput = wrap.querySelectorAll('input[type="number"]')[0];
+    const msInput = wrap.querySelectorAll('input[type="number"]')[1];
+
+    colorInput.addEventListener("input", (e) => {
+      this.editorSteps[idx].color = e.target.value;
+    });
+    bInput.addEventListener("input", (e) => {
+      this.editorSteps[idx].brightness = Math.max(1, Math.min(100, parseInt(e.target.value || "1")));
+    });
+    msInput.addEventListener("input", (e) => {
+      this.editorSteps[idx].ms = Math.max(50, Math.min(60000, parseInt(e.target.value || "300")));
+    });
+
+    wrap.querySelectorAll("button").forEach(btn => {
+      const act = btn.dataset.act;
+      if (!act) return;
+
+      btn.addEventListener("click", async () => {
+        if (act === "del") {
+          this.editorSteps.splice(idx, 1);
+          this.renderSceneSteps();
+        } else if (act === "up" && idx > 0) {
+          const tmp = this.editorSteps[idx - 1];
+          this.editorSteps[idx - 1] = this.editorSteps[idx];
+          this.editorSteps[idx] = tmp;
+          this.renderSceneSteps();
+        } else if (act === "down" && idx < this.editorSteps.length - 1) {
+          const tmp = this.editorSteps[idx + 1];
+          this.editorSteps[idx + 1] = this.editorSteps[idx];
+          this.editorSteps[idx] = tmp;
+          this.renderSceneSteps();
+        } else if (act === "test") {
+          await this.testSingleStep(this.editorSteps[idx]);
+        }
+      });
+    });
+
+    this.sceneStepsList.appendChild(wrap);
+  });
+}
+
+async testSingleStep(step) {
+  try {
+    this.stopAllModes();
+    const [r,g,b] = this.hexToRgb(step.color);
+    await this.setColor(r,g,b);
+    if (step.brightness != null) await this.setBrightness(step.brightness);
+    this.setSceneMsg("Step tested ✅", "ok");
+  } catch (e) {
+    this.setSceneMsg("Test failed: " + String(e.message || e), "error");
+  }
+}
+
+stopAllModes() {
+  // stop scene + music
+  this.scenePlaying = false;
+  this.music?.stop?.();
+
+  if (this.musicModeBtn) {
+    this.musicModeBtn.classList.remove("btn-music-active");
+    this.musicModeBtn.disabled = false;
+  }
+  if (this.stopMusicBtn) this.stopMusicBtn.disabled = true;
+
+  this.setSceneMsg("Stopped.", "ok");
+}
+
+buildSceneFromEditor() {
+  const name = (this.sceneNameInput?.value || "").trim();
+  if (!name) throw new Error("Scene name is required");
+
+  if (!this.editorSteps.length) throw new Error("Add at least 1 step");
+
+  const defB = this.sceneDefaultBrightness?.value;
+  const defaultBrightness = defB !== "" ? parseInt(defB) : null;
+
+  const scene = {
+    id: this.editingSceneId || `scene_${Date.now()}`,
+    type: "scene",
+    name,
+    loop: (this.sceneLoopSelect?.value === "on"),
+    defaultBrightness: defaultBrightness != null && !Number.isNaN(defaultBrightness) ? defaultBrightness : null,
+    steps: this.editorSteps.map(s => ({
+      color: this.hexToRgb(s.color),
+      brightness: s.brightness ?? null,
+      ms: s.ms ?? 300
+    }))
+  };
+
+  return scene;
+}
+
+async previewEditorScene() {
+  try {
+    const scene = this.buildSceneFromEditor();
+    this.setSceneMsg("Playing...", "ok");
+
+    // play using your existing playScene logic but from built object
+    await this.playScene(scene);
+
+    if (scene.loop) {
+      // simple loop: keep playing until Stop clicked
+      while (this.scenePlaying) {
+        await this.playScene(scene);
+      }
+    }
+  } catch (e) {
+    this.setSceneMsg(String(e.message || e), "error");
+  }
+}
+
+async saveEditorScene() {
+  try {
+    if (!window.electron) {
+      this.setSceneMsg("Electron required to save presets.", "error");
+      return;
+    }
+
+    const scene = this.buildSceneFromEditor();
+
+    // uses your existing creator helper
+    await saveScenePreset(scene);
+
+    this.setSceneMsg("Saved ✅", "ok");
+    this.log(`Scene saved: ${scene.name}`, "success");
+
+    await this.loadDynamicPresets();
+    this.closeSceneEditor();
+  } catch (e) {
+    this.setSceneMsg(String(e.message || e), "error");
+  }
+}
+
+rgbArrToHex(arr) {
+  const [r,g,b] = arr || [255,0,0];
+  return this.rgbToHex(r,g,b);
+}
 
   initElements() {
     // Header
@@ -96,6 +314,27 @@ class GoveeApp {
     this.stopMusicBtn = document.getElementById("stopMusic");
     this.exportRulesBtn = document.getElementById("exportRulesBtn");
     this.importRulesBtn = document.getElementById("importRulesBtn");
+
+this.openSceneEditorBtn = document.getElementById("openSceneEditorBtn");
+this.sceneEditorModal = document.getElementById("sceneEditorModal");
+this.closeSceneEditorBtn = document.getElementById("closeSceneEditorBtn");
+this.sceneEditorTitle = document.getElementById("sceneEditorTitle");
+
+this.sceneNameInput = document.getElementById("sceneNameInput");
+this.sceneDefaultBrightness = document.getElementById("sceneDefaultBrightness");
+this.sceneLoopSelect = document.getElementById("sceneLoopSelect");
+this.sceneStepsList = document.getElementById("sceneStepsList");
+this.addSceneStepBtn = document.getElementById("addSceneStepBtn");
+
+this.previewSceneBtn = document.getElementById("previewSceneBtn");
+this.stopSceneBtn = document.getElementById("stopSceneBtn");
+this.saveSceneBtn = document.getElementById("saveSceneBtn");
+this.sceneEditorMsg = document.getElementById("sceneEditorMsg");
+
+// state for editor
+this.editingSceneId = null;
+this.editorSteps = [];
+this.userPresetsCache = null;
   }
 
   attachEventListeners() {
@@ -107,10 +346,32 @@ class GoveeApp {
           this.log("Device IP updated");
         } catch (error) {
           this.showErrorDialog("Invalid IP", error.message);
-          this.ipInput.value = api.deviceIp; // revert to last valid IP
+          this.ipInput.value = api.deviceIp;
         }
       });
     }
+// Scene Editor
+if (this.openSceneEditorBtn) {
+  this.openSceneEditorBtn.addEventListener("click", () => this.openSceneEditor());
+}
+if (this.closeSceneEditorBtn) {
+  this.closeSceneEditorBtn.addEventListener("click", () => this.closeSceneEditor());
+}
+if (this.addSceneStepBtn) {
+  this.addSceneStepBtn.addEventListener("click", () => {
+    this.editorSteps.push({ color: "#ff0000", brightness: 80, ms: 300 });
+    this.renderSceneSteps();
+  });
+}
+if (this.previewSceneBtn) {
+  this.previewSceneBtn.addEventListener("click", async () => this.previewEditorScene());
+}
+if (this.stopSceneBtn) {
+  this.stopSceneBtn.addEventListener("click", () => this.stopAllModes());
+}
+if (this.saveSceneBtn) {
+  this.saveSceneBtn.addEventListener("click", async () => this.saveEditorScene());
+}
 
     // Discovery
     if (this.discoverBtn) this.discoverBtn.addEventListener("click", () => this.showDiscoveryModal());
@@ -191,28 +452,68 @@ class GoveeApp {
     }
 
     // Wire API command logging
-    api.onCommandSent = (entry) => this.logCommand(entry);
+    if (window.api) api.onCommandSent = (entry) => this.logCommand(entry);
+
+    // Hardcoded quick preset buttons (static HTML)
+    document.querySelectorAll(".btn.btn-preset[data-color]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        try {
+          const [r, g, b] = String(btn.dataset.color).split(",").map(Number);
+          await this.setColor(r, g, b);
+          this.updateColorInputs(r, g, b);
+        } catch (e) {
+          this.log(`Preset click error: ${String(e.message || e)}`, "error");
+        }
+      });
+    });
 
     // DIY Scene creator button
-    if (this.createSceneBtn) {
-      this.createSceneBtn.addEventListener("click", async () => {
-        try {
-          const scene = createScenePreset("My Scene", [
-            { color: [255, 0, 0], brightness: 80, ms: 300 },
-            { color: [0, 0, 255], brightness: 100, ms: 300 },
-          ]);
-          await saveScenePreset(scene);
-          await this.loadDynamicPresets();
-          this.log("DIY scene saved");
-        } catch (e) {
-          this.showErrorDialog("Scene Save Failed", String(e.message || e));
-        }
+   if (this.createSceneBtn) {
+  this.createSceneBtn.addEventListener("click", async () => {
+    try {
+      const scene = createScenePreset("My Scene", [
+        { color: [255, 0, 0], brightness: 80, ms: 300 },
+        { color: [0, 0, 255], brightness: 100, ms: 300 },
+      ]);
+
+      await saveScenePreset(scene);
+      await this.loadDynamicPresets();
+      this.log("DIY scene saved", "success");
+    } catch (e) {
+      this.showErrorDialog("Scene Save Failed", String(e?.message || e));
+    }
+  });
+}
+
+
+    // Music mode buttons (also stops scene)
+    if (this.musicModeBtn) {
+      this.musicModeBtn.classList.remove("btn-music-active");
+      this.musicModeBtn.disabled = false;
+
+      this.musicModeBtn.addEventListener("click", () => {
+        this.scenePlaying = false; // stop any running scene
+        this.music.start();
+        this.musicModeBtn.classList.add("btn-music-active");
+        this.musicModeBtn.disabled = true;
+        if (this.stopMusicBtn) this.stopMusicBtn.disabled = false;
       });
     }
 
-    // Music mode buttons
-    if (this.musicModeBtn) this.musicModeBtn.addEventListener("click", () => this.music.start());
-    if (this.stopMusicBtn) this.stopMusicBtn.addEventListener("click", () => this.music.stop());
+    if (this.stopMusicBtn) {
+      this.stopMusicBtn.disabled = true;
+
+      this.stopMusicBtn.addEventListener("click", () => {
+        this.scenePlaying = false; // stop scene too
+        this.music.stop();
+
+        if (this.musicModeBtn) {
+          this.musicModeBtn.classList.remove("btn-music-active");
+          this.musicModeBtn.disabled = false;
+        }
+        this.stopMusicBtn.disabled = true;
+      });
+    }
   }
 
   // -------------------------
@@ -250,6 +551,7 @@ class GoveeApp {
       await api.setDeviceColor(r, g, b);
       this.lastColor = { r, g, b };
       if (this.colorPicker) this.colorPicker.value = this.rgbToHex(r, g, b);
+      this.updateColorInputs(r, g, b);
       this.log(`Color → ${this.rgbToHex(r, g, b).toUpperCase()}`);
     } catch (error) {
       this.log(`Color error: ${error.message}`, "error");
@@ -280,86 +582,91 @@ class GoveeApp {
   // -------------------------
   // Dynamic Presets (GitHub + user)
   // -------------------------
-  async loadDynamicPresets() {
-    const grid = this.presetsGrid || document.querySelector(".presets-grid");
-    if (!grid) return;
+async loadDynamicPresets() {
+  const grid = document.querySelector(".presets-grid");
+  if (!grid) return;
 
-    // If Electron IPC is not there, don't crash
-    if (!window.electron?.presetsSync || !window.electron?.getUserPresets) {
-      // keep existing static HTML presets if any
-      this.log("Presets sync not available (Electron IPC missing)", "info");
-      return;
-    }
-
-    let remote = null;
-    let user = null;
-
-    try {
-      remote = await window.electron.presetsSync();
-    } catch (e) {
-      this.log(`Presets sync failed: ${String(e.message || e)}`, "error");
-      remote = { data: { presets: [] } };
-    }
-
-    try {
-      user = await window.electron.getUserPresets();
-    } catch (e) {
-      user = { presets: [] };
-    }
-
-    const presets = [
-      ...(remote?.data?.presets || []),
-      ...(user?.presets || []),
-    ];
-
-    // Rebuild grid
-    grid.innerHTML = "";
-
-    if (!presets.length) {
-      grid.innerHTML = `<div style="color: var(--muted); font-size: 12px; padding: 10px;">No presets yet</div>`;
-      return;
-    }
-
-    for (const p of presets) {
-      const btn = document.createElement("button");
-      btn.className = "btn btn-preset";
-      btn.textContent = p.name || "Preset";
-
-      btn.addEventListener("click", async () => {
-        try {
-          if (p.type === "static") {
-            const [r, g, b] = p.color || [255, 0, 0];
-            await this.setColor(r, g, b);
-            if (p.brightness != null) await this.setBrightness(p.brightness);
-          } else if (p.type === "scene") {
-            await this.playScene(p);
-          } else if (p.type === "music") {
-            // music preset just starts reactive mode for now
-            this.music.start();
-          }
-        } catch (e) {
-          this.log(`Preset error: ${String(e.message || e)}`, "error");
-        }
-      });
-
-      grid.appendChild(btn);
-    }
-
-    if (remote?.source === "cache" && remote?.warning) {
-      this.log(`Presets loaded from cache (${remote.warning})`, "info");
-    } else {
-      this.log(`Presets loaded: ${presets.length}`, "info");
-    }
+  // keď app nejde v Electron, nechaj pôvodné HTML preset tlačidlá
+  if (!window.electron?.presetsSync || !window.electron?.getUserPresets) {
+    this.log("Dynamic presets not available (Electron IPC missing) — using static presets.", "info");
+    return;
   }
+
+  let remote = { data: { presets: [] } };
+  let user = { presets: [] };
+
+  try { remote = await window.electron.presetsSync(); } catch (e) {}
+  try { user = await window.electron.getUserPresets(); } catch (e) {}
+
+  const presets = [
+    ...(remote?.data?.presets || []),
+    ...(user?.presets || [])
+  ];
+
+  grid.innerHTML = "";
+
+  if (!presets.length) {
+    grid.innerHTML = `<div style="color: var(--muted); font-size: 12px; padding: 10px;">No presets yet</div>`;
+    return;
+  }
+
+  for (const p of presets) {
+    const btn = document.createElement("button");
+    btn.className = "btn btn-preset";
+    btn.textContent = p.name || "Preset";
+
+    // ľavý klik = play/apply
+    btn.addEventListener("click", async () => {
+      try {
+        if (p.type === "static") {
+          const [r, g, b] = p.color || [255, 0, 0];
+          await this.setColor(r, g, b);
+          if (p.brightness != null) await this.setBrightness(p.brightness);
+        } else if (p.type === "scene") {
+          await this.playScene(p);
+        } else if (p.type === "music") {
+          this.music.start();
+        }
+      } catch (e) {
+        this.log(`Preset error: ${String(e?.message || e)}`, "error");
+      }
+    });
+
+    // pravý klik = edit scene
+    btn.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      if (p.type === "scene") this.openSceneEditor(p);
+    });
+
+    grid.appendChild(btn);
+  }
+
+  this.log(`Presets loaded: ${presets.length}`, "success");
+}
 
   async playScene(scene) {
     if (!Array.isArray(scene.steps)) return;
+
+    // Stop music if running
+    this.music.stop();
+    if (this.musicModeBtn) {
+      this.musicModeBtn.classList.remove("btn-music-active");
+      this.musicModeBtn.disabled = false;
+    }
+    if (this.stopMusicBtn) this.stopMusicBtn.disabled = true;
+
+    this.scenePlaying = true;
+
     for (const step of scene.steps) {
+      if (!this.scenePlaying) break;
+
       const [r, g, b] = step.color || [255, 0, 0];
       await this.setColor(r, g, b);
       if (step.brightness != null) await this.setBrightness(step.brightness);
       await new Promise((res) => setTimeout(res, step.ms || 300));
     }
+
+    this.scenePlaying = false;
   }
 
   // -------------------------
@@ -438,7 +745,6 @@ class GoveeApp {
   async exportRules() {
     try {
       if (!window.electron) {
-        rememberThis();
         this.showErrorDialog("Export Failed", "Electron API not available (not running as Electron app)");
         return;
       }
@@ -449,11 +755,6 @@ class GoveeApp {
       }
     } catch (error) {
       this.showErrorDialog("Export Error", error.message);
-    }
-
-    function rememberThis() {
-      // placeholder to avoid accidental future minifier removal issues
-      return true;
     }
   }
 
@@ -493,7 +794,7 @@ class GoveeApp {
           this.startAutoBtn.classList.remove("active");
         }
       }
-    } catch (err) {
+    } catch {
       // ignore
     }
   }
@@ -830,10 +1131,8 @@ class GoveeApp {
 
       if (this.scanBtn) this.scanBtn.disabled = true;
 
-      console.log("[DISCOVERY] Starting scan...");
       const result = await api.discoverDevices();
       const devices = result.devices || [];
-      console.log("[DISCOVERY] Found devices:", devices);
 
       if (devices.length === 0) {
         this.discoveryStatus.innerHTML =
@@ -844,7 +1143,6 @@ class GoveeApp {
       this.displayDiscoveredDevices(devices);
       this.log(`Found ${devices.length} device(s)`);
     } catch (error) {
-      console.error("[DISCOVERY] Error:", error);
       let errorMsg = error.message;
 
       if (String(errorMsg).includes("Failed to fetch")) {

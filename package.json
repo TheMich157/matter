@@ -72,6 +72,6 @@
   "publish": {
     "provider": "github",
     "owner": "TheMich157",
-    "repo": "govee-lan-controller"
+    "repo": "matter"
   }
 }

@@ -102,7 +102,7 @@
                     </div>
 
                     <!-- NEW: DIY + Music controls -->
-                    <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                    <div class="preset-actions">
                         <button id="createScene" class="btn btn-small btn-secondary">+ Create Scene</button>
                         <button id="musicMode" class="btn btn-small">🎵 Music Mode</button>
                         <button id="stopMusic" class="btn btn-small btn-secondary">⏹ Stop</button>
@@ -125,6 +125,17 @@
                         <div id="commandLog" class="command-log"></div>
                     </div>
                 </div>
+<!-- Scene Builder -->
+<div class="card">
+  <div class="scene-header">
+    <h3>Scenes (DIY)</h3>
+    <button id="openSceneEditorBtn" class="btn btn-small btn-secondary">+ New Scene</button>
+  </div>
+
+  <div class="scene-hint">
+    Create custom scenes: multiple color steps, brightness & timing.
+  </div>
+</div>
 
                 <!-- Packet Inspector -->
                 <div class="card">
@@ -196,6 +207,51 @@
             </div>
         </div>
     </div>
+<!-- Scene Editor Modal -->
+<div id="sceneEditorModal" class="modal" style="display:none;">
+  <div class="modal-content scene-modal">
+    <div class="modal-header">
+      <h2 id="sceneEditorTitle">Scene Editor</h2>
+      <button id="closeSceneEditorBtn" class="btn btn-small btn-secondary">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="scene-form">
+        <label>Scene name</label>
+        <input id="sceneNameInput" class="ip-input" style="width:100%;" placeholder="e.g. Chill Wave" />
+
+        <div class="scene-row">
+          <div class="scene-col">
+            <label>Default brightness (optional)</label>
+            <input id="sceneDefaultBrightness" type="number" min="1" max="100" class="ip-input" style="width:100%;" placeholder="e.g. 80" />
+          </div>
+          <div class="scene-col">
+            <label>Loop</label>
+            <select id="sceneLoopSelect" class="action-select" style="width:100%;">
+              <option value="off">No</option>
+              <option value="on">Yes</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="scene-steps-header">
+          <h3 style="margin:0;">Steps</h3>
+          <button id="addSceneStepBtn" class="btn btn-small btn-add">+ Step</button>
+        </div>
+
+        <div id="sceneStepsList" class="scene-steps"></div>
+
+        <div class="scene-actions">
+          <button id="previewSceneBtn" class="btn btn-auto">Preview / Play</button>
+          <button id="stopSceneBtn" class="btn btn-small btn-secondary">Stop</button>
+          <button id="saveSceneBtn" class="btn btn-small">Save</button>
+        </div>
+
+        <div id="sceneEditorMsg" class="scene-msg"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
     <script src="api.js"></script>
     <!-- IMPORTANT: app.js uses imports, so it must be a module -->
