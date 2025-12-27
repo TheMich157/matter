@@ -1,8 +1,8 @@
 {
   "name": "govee-lan-controller",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Professional local control for Govee LAN lights - No cloud required",
-  "author": "Govee Controller Contributors",
+  "author": "TheMich157",
   "license": "MIT",
   "main": "electron/main.js",
   "homepage": "./",

@@ -4,7 +4,7 @@ from PyInstaller.utils.hooks import collect_submodules
 
 block_cipher = None
 
-ROOT = os.path.abspath(os.path.dirname(__file__))
+ROOT = os.path.abspath(os.path.dirname(__name__))
 
 
 def build_datas():
