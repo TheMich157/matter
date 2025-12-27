@@ -25,8 +25,9 @@
   "build": {
     "appId": "com.govee.lancontroller",
     "extraResources": [
-    { "from": "dist/govee-backend.exe", "to": "dist/govee-backend.exe" }
-  ],
+      { "from": "dist/govee-backend.exe", "to": "dist/govee-backend.exe" },
+      { "from": "dist/govee-backend", "to": "dist/govee-backend" }
+    ],
     "productName": "Govee LAN Controller",
     "files": [
       "electron/**/*",
