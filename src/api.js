@@ -143,6 +143,16 @@ class GoveeAPI {
     });
   }
 
+  async setScene(sceneId, extra = {}) {
+    if (!sceneId) throw new Error("sceneId is required");
+    this.logCommand('scene', { sceneId });
+    return this.request('/device/scene', 'POST', {
+      sceneId,
+      ...this.getDeviceIdentity(),
+      ...extra,
+    });
+  }
+
   async getDeviceStatus() {
     this.logCommand('devStatus', {});
     return this.request('/device/status', 'POST', {});

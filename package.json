@@ -1,6 +1,6 @@
 {
   "name": "govee-lan-controller",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Professional local control for Govee LAN lights - No cloud required",
   "author": "TheMich157",
   "license": "MIT",
@@ -97,6 +97,21 @@
       "shortcutName": "Govee LAN Controller"
     },
     "portable": {
+      "artifactName": "${productName}-${version}.${ext}"
+    },
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        "dmg"
+      ],
+      "artifactName": "${productName}-${version}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
+      "category": "Utility",
       "artifactName": "${productName}-${version}.${ext}"
     }
   }

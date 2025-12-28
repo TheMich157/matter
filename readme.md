@@ -6,6 +6,7 @@ Fast, private, no cloud needed.
 ### New in 2.0.0
 - LAN API console for sending any raw `cmd`/`data` or full `msg` payload (with optional device + SKU).
 - Native color temperature control using the official `colorTemInKelvin` field.
+- Scene sender that accepts any Govee app `sceneId` (official scenes).
 - Version bump to **2.0.0** to align with the expanded LAN API surface.
 
 ---

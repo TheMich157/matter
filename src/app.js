@@ -11,6 +11,7 @@ class GoveeApp {
     this.lastColor = { r: 255, g: 0, b: 0 };
     this.lastBrightness = 50;
     this.lastColorTemp = 4000;
+    this.lastSceneId = "";
 
     // runtime state
     this.currentPacket = null;
@@ -26,6 +27,7 @@ class GoveeApp {
     if (this.lanDeviceIdInput) this.lanDeviceIdInput.value = api.deviceId || "";
     if (this.lanSkuInput) this.lanSkuInput.value = api.sku || "";
     if (this.lanPayloadResult) this.setLanResult("Awaiting command…");
+    if (this.sceneIdInput) this.sceneIdInput.value = this.lastSceneId;
 
     this.loadRules();
     this.loadDynamicPresets();
