@@ -120,6 +120,20 @@ class GoveeAPI {
     return this.request('/device/color', 'POST', { r, g, b });
   }
 
+  async sendScene(sceneId, options = {}) {
+    const id = parseInt(sceneId, 10);
+    if (!Number.isInteger(id) || id < 0) {
+      throw new Error('sceneId must be a non-negative number');
+    }
+
+    this.logCommand('scene', { sceneId: id });
+    return this.request('/device/scene', 'POST', {
+      sceneId: id,
+      ...this.getDeviceIdentity(),
+      ...options,
+    });
+  }
+
   async setColorTemperature(value, extra = {}) {
     this.logCommand('colorwc', { colorTemInKelvin: value });
     return this.request('/device/color-temperature', 'POST', {

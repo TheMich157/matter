@@ -11,7 +11,8 @@
     "start-backend": "python app_backend.py",
     "start": "python app_backend.py",
     "build": "electron-builder",
-    "dist": "electron-builder --win --publish always",
+    "dist": "node scripts/build.js",
+    "dist:dry": "DRY_RUN=1 node scripts/build.js",
     "pack": "electron-builder --dir"
   },
   "dependencies": {
@@ -50,6 +51,7 @@
         "to": "govee-backend"
       }
     ],
+    "artifactName": "${productName}-${version}.${ext}",
     "win": {
       "target": [
         {
@@ -68,6 +70,24 @@
       "signingHashAlgorithms": [
         "sha256"
       ]
+    },
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        {
+          "target": "dmg"
+        },
+        {
+          "target": "zip"
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,

@@ -486,6 +486,17 @@ body {
     width: 110px;
 }
 
+.scene-id-control {
+    display: grid;
+    grid-template-columns: 2fr auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.scene-id-input {
+    width: 100%;
+}
+
 .helper-text {
     color: var(--muted);
     font-size: 12px;
