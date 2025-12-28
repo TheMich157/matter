@@ -88,6 +88,16 @@
                     <p class="helper-text">Uses the official Govee LAN field <code>colorTemInKelvin</code>.</p>
                 </div>
 
+                <!-- Official sceneId sender -->
+                <div class="card">
+                    <label>Scene (Official Govee)</label>
+                    <div class="scene-id-control">
+                        <input type="number" id="sceneIdInput" min="0" step="1" placeholder="e.g. 101 (sceneId)" class="ip-input scene-id-input">
+                        <button id="applySceneBtn" class="btn btn-small">Send Scene</button>
+                    </div>
+                    <p class="helper-text">Trigger any <code>sceneId</code> from the Govee app directly over LAN.</p>
+                </div>
+
                 <!-- Log -->
                 <div class="card log-card">
                     <label>Log</label>
