@@ -1,6 +1,6 @@
 {
   "name": "govee-lan-controller",
-  "version": "1.1.8",
+  "version": "2.0.0",
   "description": "Professional local control for Govee LAN lights - No cloud required",
   "author": "TheMich157",
   "license": "MIT",
@@ -28,7 +28,6 @@
     "directories": {
       "buildResources": "assets"
     },
-
     "publish": [
       {
         "provider": "github",
@@ -37,12 +36,10 @@
         "releaseType": "release"
       }
     ],
-
     "files": [
       "electron/**/*",
       "src/**/*"
     ],
-
     "extraResources": [
       {
         "from": "dist/govee-backend.exe",
@@ -53,15 +50,25 @@
         "to": "govee-backend"
       }
     ],
-
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
-      "signingHashAlgorithms": ["sha256"]
+      "signingHashAlgorithms": [
+        "sha256"
+      ]
     },
-
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
@@ -69,7 +76,6 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Govee LAN Controller"
     },
-
     "portable": {
       "artifactName": "${productName}-${version}.${ext}"
     }

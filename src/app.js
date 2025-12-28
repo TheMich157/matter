@@ -10,6 +10,8 @@ class GoveeApp {
     this.rules = [];
     this.lastColor = { r: 255, g: 0, b: 0 };
     this.lastBrightness = 50;
+    this.lastColorTemp = 4000;
+    this.lastSceneId = "";
 
     // runtime state
     this.currentPacket = null;
@@ -19,6 +21,13 @@ class GoveeApp {
     this.initElements();
     this.setupUpdaterUi();
     this.attachEventListeners();
+    if (this.ipInput) this.ipInput.value = api.deviceIp;
+    if (this.colorTempSlider) this.colorTempSlider.value = this.lastColorTemp;
+    if (this.colorTempInput) this.colorTempInput.value = this.lastColorTemp;
+    if (this.lanDeviceIdInput) this.lanDeviceIdInput.value = api.deviceId || "";
+    if (this.lanSkuInput) this.lanSkuInput.value = api.sku || "";
+    if (this.lanPayloadResult) this.setLanResult("Awaiting command…");
+    if (this.sceneIdInput) this.sceneIdInput.value = this.lastSceneId;
 
     this.loadRules();
     this.loadDynamicPresets();
@@ -286,6 +295,15 @@ rgbArrToHex(arr) {
     this.bInput = document.getElementById("bInput");
     this.applyRgbBtn = document.getElementById("applyRgbBtn");
 
+    // Color temperature
+    this.colorTempSlider = document.getElementById("colorTempSlider");
+    this.colorTempInput = document.getElementById("colorTempInput");
+    this.applyTempBtn = document.getElementById("applyTempBtn");
+
+    // Scenes (official sceneId support)
+    this.sceneIdInput = document.getElementById("sceneIdInput");
+    this.applySceneBtn = document.getElementById("applySceneBtn");
+
     // Rules
     this.ruleTime = document.getElementById("ruleTime");
     this.ruleAction = document.getElementById("ruleAction");
@@ -312,6 +330,14 @@ rgbArrToHex(arr) {
     this.refreshPacketsBtn = document.getElementById("refreshPacketsBtn");
     this.clearPacketsBtn = document.getElementById("clearPacketsBtn");
     this.backPacketBtn = document.getElementById("backPacketBtn");
+
+    // LAN API console
+    this.lanPayloadInput = document.getElementById("lanPayloadInput");
+    this.lanExpectReply = document.getElementById("lanExpectReply");
+    this.lanPayloadResult = document.getElementById("lanPayloadResult");
+    this.sendLanPayloadBtn = document.getElementById("sendLanPayloadBtn");
+    this.lanDeviceIdInput = document.getElementById("lanDeviceId");
+    this.lanSkuInput = document.getElementById("lanSku");
 
     // Presets grid
     this.presetsGrid = document.querySelector(".presets-grid");
@@ -433,6 +459,33 @@ rgbArrToHex(arr) {
       });
     }
 
+    // Color temperature
+    if (this.colorTempSlider && this.colorTempInput) {
+      const syncTemp = (val) => {
+        const num = this.clampKelvin(parseInt(val, 10) || this.lastColorTemp);
+        this.colorTempSlider.value = num;
+        this.colorTempInput.value = num;
+      };
+      this.colorTempSlider.addEventListener("input", (e) => syncTemp(e.target.value));
+      this.colorTempInput.addEventListener("input", (e) => syncTemp(e.target.value));
+    }
+    if (this.applyTempBtn) {
+      this.applyTempBtn.addEventListener("click", () => {
+        const value = this.clampKelvin(parseInt(this.colorTempInput?.value || this.colorTempSlider?.value || this.lastColorTemp, 10));
+        this.setColorTemperature(value);
+      });
+    }
+
+    // Scenes (sceneId from official Govee app)
+    if (this.applySceneBtn) {
+      this.applySceneBtn.addEventListener("click", () => this.applySceneFromInput());
+    }
+    if (this.sceneIdInput) {
+      this.sceneIdInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") this.applySceneFromInput();
+      });
+    }
+
     // Rules
     if (this.addRuleBtn) this.addRuleBtn.addEventListener("click", () => this.addRule());
     if (this.saveRulesBtn) this.saveRulesBtn.addEventListener("click", () => this.saveRules());
@@ -451,6 +504,21 @@ rgbArrToHex(arr) {
     if (this.refreshPacketsBtn) this.refreshPacketsBtn.addEventListener("click", () => this.loadPackets());
     if (this.clearPacketsBtn) this.clearPacketsBtn.addEventListener("click", () => this.clearPacketsUI());
     if (this.backPacketBtn) this.backPacketBtn.addEventListener("click", () => this.showPacketList());
+
+    // LAN API console
+    if (this.sendLanPayloadBtn) {
+      this.sendLanPayloadBtn.addEventListener("click", () => this.sendLanPayloadFromUi());
+    }
+    if (this.lanDeviceIdInput) {
+      this.lanDeviceIdInput.addEventListener("change", (e) => {
+        api.setDeviceIdentity(e.target.value, this.lanSkuInput?.value || api.sku);
+      });
+    }
+    if (this.lanSkuInput) {
+      this.lanSkuInput.addEventListener("change", (e) => {
+        api.setDeviceIdentity(this.lanDeviceIdInput?.value || api.deviceId, e.target.value);
+      });
+    }
 
     // Enter key on rule value
     if (this.ruleValue) {
@@ -697,6 +765,84 @@ rgbArrToHex(arr) {
     } catch (error) {
       this.log(`Color error: ${error.message}`, "error");
     }
+  }
+
+  clampKelvin(value) {
+    const val = Number.isFinite(value) ? value : this.lastColorTemp;
+    return Math.max(1000, Math.min(10000, parseInt(val, 10) || this.lastColorTemp));
+  }
+
+  async setColorTemperature(value) {
+    const kelvin = this.clampKelvin(value);
+    try {
+      await api.setColorTemperature(kelvin);
+      this.lastColorTemp = kelvin;
+      if (this.colorTempSlider) this.colorTempSlider.value = kelvin;
+      if (this.colorTempInput) this.colorTempInput.value = kelvin;
+      this.log(`Color temperature → ${kelvin}K`);
+    } catch (error) {
+      this.log(`Color temperature error: ${error.message}`, "error");
+    }
+  }
+
+  async applySceneFromInput() {
+    const raw = this.sceneIdInput?.value?.trim();
+    if (!raw) {
+      this.log("Enter a sceneId from the Govee app.", "warning");
+      return;
+    }
+    const sceneId = /^\d+$/.test(raw) ? parseInt(raw, 10) : raw;
+    try {
+      await api.setScene(sceneId);
+      this.lastSceneId = raw;
+      this.log(`Scene applied → ${sceneId}`);
+    } catch (error) {
+      this.log(`Scene error: ${error.message}`, "error");
+    }
+  }
+
+  async sendLanPayloadFromUi() {
+    if (!this.lanPayloadInput) return;
+    const raw = this.lanPayloadInput.value.trim();
+    if (!raw) {
+      this.setLanResult("Enter a LAN payload JSON with msg or cmd.");
+      return;
+    }
+
+    let payload;
+    try {
+      payload = JSON.parse(raw);
+    } catch (e) {
+      this.setLanResult("Invalid JSON: " + (e.message || e), true);
+      return;
+    }
+
+    const expectReply = this.lanExpectReply ? this.lanExpectReply.checked : true;
+    const device = this.lanDeviceIdInput?.value?.trim() || undefined;
+    const sku = this.lanSkuInput?.value?.trim() || undefined;
+
+    try {
+      let resp;
+      if (payload.msg) {
+        resp = await api.sendLanPayload(payload, { expectReply, device, sku });
+      } else if (payload.cmd) {
+        resp = await api.sendLanCommand(payload.cmd, payload.data || {}, { expectReply, device, sku });
+      } else {
+        throw new Error("Payload must include either msg or cmd + data.");
+      }
+      this.setLanResult(resp);
+      this.log("LAN API payload sent", "success");
+    } catch (error) {
+      this.setLanResult(error.message || String(error), true);
+      this.log(`LAN API error: ${error.message}`, "error");
+    }
+  }
+
+  setLanResult(content, isError = false) {
+    if (!this.lanPayloadResult) return;
+    const formatted = typeof content === "string" ? content : JSON.stringify(content, null, 2);
+    this.lanPayloadResult.textContent = formatted;
+    this.lanPayloadResult.dataset.state = isError ? "error" : "ok";
   }
 
   async checkDeviceStatus() {
@@ -1316,6 +1462,7 @@ async loadDynamicPresets() {
       const deviceType = dev.device_type || "Unknown";
       const deviceName = dev.device_name || `Govee Device (${ip})`;
       const sku = dev.sku || "N/A";
+      const deviceId = dev?.data?.msg?.device || dev.device || "";
 
       div.innerHTML = `
         <div class="device-ip">${ip}</div>
@@ -1328,6 +1475,9 @@ async loadDynamicPresets() {
       div.addEventListener("click", () => {
         if (this.ipInput) this.ipInput.value = ip;
         api.setDeviceIp(ip);
+        api.setDeviceIdentity(deviceId, sku !== "N/A" ? sku : "");
+        if (this.lanDeviceIdInput) this.lanDeviceIdInput.value = deviceId || "";
+        if (this.lanSkuInput) this.lanSkuInput.value = sku !== "N/A" ? sku : "";
         this.log(`Connected to ${deviceName} (${ip})`, "success");
         this.hideDiscoveryModal();
 
