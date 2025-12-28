@@ -300,7 +300,7 @@ rgbArrToHex(arr) {
     this.colorTempInput = document.getElementById("colorTempInput");
     this.applyTempBtn = document.getElementById("applyTempBtn");
 
-    // Scenes (official sceneId support)
+    // Official scene sender
     this.sceneIdInput = document.getElementById("sceneIdInput");
     this.applySceneBtn = document.getElementById("applySceneBtn");
 
@@ -476,13 +476,13 @@ rgbArrToHex(arr) {
       });
     }
 
-    // Scenes (sceneId from official Govee app)
+    // Scene sender
     if (this.applySceneBtn) {
-      this.applySceneBtn.addEventListener("click", () => this.applySceneFromInput());
+      this.applySceneBtn.addEventListener("click", () => this.sendSceneId());
     }
     if (this.sceneIdInput) {
       this.sceneIdInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") this.applySceneFromInput();
+        if (e.key === "Enter") this.sendSceneId();
       });
     }
 
@@ -785,19 +785,23 @@ rgbArrToHex(arr) {
     }
   }
 
-  async applySceneFromInput() {
-    const raw = this.sceneIdInput?.value?.trim();
-    if (!raw) {
-      this.log("Enter a sceneId from the Govee app.", "warning");
+  async sendSceneId() {
+    if (!this.sceneIdInput) return;
+    const raw = this.sceneIdInput.value.trim();
+    const sceneId = parseInt(raw, 10);
+
+    if (!Number.isInteger(sceneId) || sceneId < 0) {
+      this.showErrorDialog("Invalid sceneId", "Enter a non-negative sceneId value from the Govee app.");
       return;
     }
-    const sceneId = /^\d+$/.test(raw) ? parseInt(raw, 10) : raw;
+
     try {
-      await api.setScene(sceneId);
-      this.lastSceneId = raw;
-      this.log(`Scene applied → ${sceneId}`);
+      await api.sendScene(sceneId);
+      this.log(`Scene ID → ${sceneId}`);
     } catch (error) {
-      this.log(`Scene error: ${error.message}`, "error");
+      const msg = error.message || String(error);
+      this.log(`Scene error: ${msg}`, "error");
+      this.showErrorDialog("Scene Failed", msg);
     }
   }
 

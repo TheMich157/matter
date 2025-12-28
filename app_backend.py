@@ -460,6 +460,38 @@ def device_color():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
+@app.route("/api/device/scene", methods=["POST", "OPTIONS"])
+def device_scene():
+    """Activate an official Govee scene by its sceneId."""
+    if request.method == "OPTIONS":
+        return "", 200
+    try:
+        data = request.get_json(silent=True) or {}
+        ip = data.get("ip") or govee.ip
+        scene_id = data.get("sceneId", data.get("scene_id"))
+        device = data.get("device")
+        sku = data.get("sku")
+
+        if scene_id is None:
+            return jsonify({"status": "error", "message": "sceneId is required"}), 400
+
+        scene_int = int(scene_id)
+        if scene_int < 0:
+            return jsonify({"status": "error", "message": "sceneId must be non-negative"}), 400
+        if ip:
+            govee.set_ip(ip)
+        if device or sku:
+            govee.set_device_info(device=device, sku=sku)
+
+        govee.scene(scene_int)
+        return jsonify({"status": "ok", "action": "scene", "sceneId": scene_int})
+    except ValueError:
+        return jsonify({"status": "error", "message": "sceneId must be a number"}), 400
+    except Exception as e:
+        print(f"Error in device_scene: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
 @app.route("/api/device/raw", methods=["POST", "OPTIONS"])
 def device_raw():
     """Send an arbitrary Govee LAN payload for advanced API control."""
