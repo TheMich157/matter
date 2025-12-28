@@ -77,10 +77,39 @@
                     </div>
                 </div>
 
+                <!-- Color Temperature -->
+                <div class="card">
+                    <label>Color Temperature</label>
+                    <div class="temp-control">
+                        <input type="range" id="colorTempSlider" min="1000" max="10000" value="4000" class="slider">
+                        <input type="number" id="colorTempInput" min="1000" max="10000" value="4000" class="temp-input">
+                        <button id="applyTempBtn" class="btn btn-small">Apply</button>
+                    </div>
+                    <p class="helper-text">Uses the official Govee LAN field <code>colorTemInKelvin</code>.</p>
+                </div>
+
                 <!-- Log -->
                 <div class="card log-card">
                     <label>Log</label>
                     <div id="logBox" class="log-box"></div>
+                </div>
+
+                <!-- LAN API Console -->
+                <div class="card">
+                    <h3>LAN API 2.0 Console</h3>
+                    <p class="helper-text">
+                        Send any raw Govee LAN payload. Provide <code>msg</code> or <code>cmd</code> + <code>data</code>.
+                    </p>
+                    <textarea id="lanPayloadInput" class="ip-input lan-payload" rows="5" placeholder='{ "cmd": "devStatus", "data": {} }'></textarea>
+                    <div class="lan-console-actions">
+                        <label class="checkbox">
+                            <input type="checkbox" id="lanExpectReply" checked> Expect reply
+                        </label>
+                        <input type="text" id="lanDeviceId" class="ip-input" placeholder="Device ID (optional)">
+                        <input type="text" id="lanSku" class="ip-input" placeholder="SKU (optional)">
+                        <button id="sendLanPayloadBtn" class="btn btn-small">Send</button>
+                    </div>
+                    <pre id="lanPayloadResult" class="lan-result">Awaiting command…</pre>
                 </div>
             </section>
 
