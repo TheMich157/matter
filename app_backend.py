@@ -498,6 +498,33 @@ def device_raw():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
+@app.route("/api/device/scene", methods=["POST", "OPTIONS"])
+def device_scene():
+    """Activate an official Govee sceneId (matches the scene list from the mobile app)."""
+    if request.method == "OPTIONS":
+        return "", 200
+    try:
+        data = request.get_json(silent=True) or {}
+        ip = data.get("ip") or govee.ip
+        scene_id = data.get("sceneId") or data.get("scene_id")
+        device = data.get("device")
+        sku = data.get("sku")
+
+        if not scene_id:
+            return jsonify({"status": "error", "message": "sceneId is required"}), 400
+
+        if ip:
+            govee.set_ip(ip)
+        if device or sku:
+            govee.set_device_info(device=device, sku=sku)
+
+        govee.scene(scene_id)
+        return jsonify({"status": "ok", "action": "scene", "sceneId": scene_id})
+    except Exception as e:
+        print(f"Error in device_scene: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
 @app.route("/api/device/status", methods=["POST", "OPTIONS"])
 def device_status():
     if request.method == "OPTIONS":

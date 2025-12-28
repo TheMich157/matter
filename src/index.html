@@ -88,6 +88,16 @@
                     <p class="helper-text">Uses the official Govee LAN field <code>colorTemInKelvin</code>.</p>
                 </div>
 
+                <!-- Govee App Scenes -->
+                <div class="card">
+                    <label>Scenes (sceneId from Govee app)</label>
+                    <div class="scene-control">
+                        <input type="text" id="sceneIdInput" class="ip-input" placeholder="e.g. 1, 27, nightlight, etc.">
+                        <button id="applySceneBtn" class="btn btn-small">Apply Scene</button>
+                    </div>
+                    <p class="helper-text">Sends <code>sceneId</code> via LAN so you can trigger any official scene.</p>
+                </div>
+
                 <!-- Log -->
                 <div class="card log-card">
                     <label>Log</label>
