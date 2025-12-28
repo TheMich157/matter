@@ -20,7 +20,7 @@ Push-Location $ROOT
 
 try {
     # Version from package.json if possible, fallback otherwise
-    $VERSION = "1.1.8"
+    $VERSION = "2.0.0"
     $pkgPath = Join-Path $ROOT "package.json"
     if (Test-Path $pkgPath) {
         try {

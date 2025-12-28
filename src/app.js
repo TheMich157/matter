@@ -11,7 +11,6 @@ class GoveeApp {
     this.lastColor = { r: 255, g: 0, b: 0 };
     this.lastBrightness = 50;
     this.lastColorTemp = 4000;
-    this.lastSceneId = "";
 
     // runtime state
     this.currentPacket = null;
@@ -27,7 +26,6 @@ class GoveeApp {
     if (this.lanDeviceIdInput) this.lanDeviceIdInput.value = api.deviceId || "";
     if (this.lanSkuInput) this.lanSkuInput.value = api.sku || "";
     if (this.lanPayloadResult) this.setLanResult("Awaiting command…");
-    if (this.sceneIdInput) this.sceneIdInput.value = this.lastSceneId;
 
     this.loadRules();
     this.loadDynamicPresets();
@@ -300,10 +298,6 @@ rgbArrToHex(arr) {
     this.colorTempInput = document.getElementById("colorTempInput");
     this.applyTempBtn = document.getElementById("applyTempBtn");
 
-    // Scenes (official sceneId support)
-    this.sceneIdInput = document.getElementById("sceneIdInput");
-    this.applySceneBtn = document.getElementById("applySceneBtn");
-
     // Rules
     this.ruleTime = document.getElementById("ruleTime");
     this.ruleAction = document.getElementById("ruleAction");
@@ -473,16 +467,6 @@ rgbArrToHex(arr) {
       this.applyTempBtn.addEventListener("click", () => {
         const value = this.clampKelvin(parseInt(this.colorTempInput?.value || this.colorTempSlider?.value || this.lastColorTemp, 10));
         this.setColorTemperature(value);
-      });
-    }
-
-    // Scenes (sceneId from official Govee app)
-    if (this.applySceneBtn) {
-      this.applySceneBtn.addEventListener("click", () => this.applySceneFromInput());
-    }
-    if (this.sceneIdInput) {
-      this.sceneIdInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") this.applySceneFromInput();
       });
     }
 
@@ -782,22 +766,6 @@ rgbArrToHex(arr) {
       this.log(`Color temperature → ${kelvin}K`);
     } catch (error) {
       this.log(`Color temperature error: ${error.message}`, "error");
-    }
-  }
-
-  async applySceneFromInput() {
-    const raw = this.sceneIdInput?.value?.trim();
-    if (!raw) {
-      this.log("Enter a sceneId from the Govee app.", "warning");
-      return;
-    }
-    const sceneId = /^\d+$/.test(raw) ? parseInt(raw, 10) : raw;
-    try {
-      await api.setScene(sceneId);
-      this.lastSceneId = raw;
-      this.log(`Scene applied → ${sceneId}`);
-    } catch (error) {
-      this.log(`Scene error: ${error.message}`, "error");
     }
   }
 
