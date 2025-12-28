@@ -15,3 +15,12 @@
 **Frontend**
 - Added LAN API console UI, color temperature control, and sceneId input with discovery-powered device/SKU persistence.
 - Updated automation/logging to surface new commands and status feedback.
+
+## 2.0.1
+**Highlights**
+- Added build targets for macOS (`.dmg`) and Linux (`.AppImage` and `.tar.gz`) with publish hooks.
+- Unified publish script (`npm run dist`) to honor all platform targets, plus per-OS scripts.
+
+**Build & Release**
+- Added `mac` and `linux` sections to Electron Builder config with artifact naming.
+- Added `dist:mac`, `dist:linux`, and updated `dist` to `--publish always`.
