@@ -1430,6 +1430,7 @@ async loadDynamicPresets() {
       const deviceType = dev.device_type || "Unknown";
       const deviceName = dev.device_name || `Govee Device (${ip})`;
       const sku = dev.sku || "N/A";
+      const deviceId = dev?.data?.msg?.device || dev.device || "";
 
       div.innerHTML = `
         <div class="device-ip">${ip}</div>
@@ -1442,6 +1443,9 @@ async loadDynamicPresets() {
       div.addEventListener("click", () => {
         if (this.ipInput) this.ipInput.value = ip;
         api.setDeviceIp(ip);
+        api.setDeviceIdentity(deviceId, sku !== "N/A" ? sku : "");
+        if (this.lanDeviceIdInput) this.lanDeviceIdInput.value = deviceId || "";
+        if (this.lanSkuInput) this.lanSkuInput.value = sku !== "N/A" ? sku : "";
         this.log(`Connected to ${deviceName} (${ip})`, "success");
         this.hideDiscoveryModal();
 
