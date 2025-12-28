@@ -12,6 +12,7 @@ import sys
 import threading
 import time
 from datetime import datetime
+from typing import Optional
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
@@ -75,7 +76,7 @@ class GoveeLAN:
     and color mode support for all Govee LAN models
     """
     
-    def __init__(self, ip: str, port: int = CONTROL_PORT):
+    def __init__(self, ip: str, port: int = CONTROL_PORT, device: Optional[str] = None, sku: Optional[str] = None):
         self.ip = ip
         self.port = port
         self.last_status = {}
@@ -83,13 +84,35 @@ class GoveeLAN:
         self.retry_delay = 0.3
         self.scenes = {}
         self.color_mode = "rgb"  # or "ct" for color temperature
+        self.device = device
+        self.sku = sku
 
     def set_ip(self, ip: str):
         self.ip = ip.strip()
 
-    def _send(self, payload: dict, expect_reply: bool = False, timeout: float = 1.0):
+    def set_device_info(self, device: Optional[str] = None, sku: Optional[str] = None):
+        if device is not None:
+            self.device = device.strip()
+        if sku is not None:
+            self.sku = sku.strip()
+
+    def _with_device_info(self, payload: dict, device: Optional[str] = None, sku: Optional[str] = None):
+        enriched = dict(payload)
+        dev = device or self.device
+        sku_val = sku or self.sku
+        if dev and "device" not in enriched:
+            enriched["device"] = dev
+        if sku_val and "sku" not in enriched:
+            enriched["sku"] = sku_val
+        return enriched
+
+    def _wrap_msg(self, cmd: str, data: Optional[dict] = None):
+        return {"msg": {"cmd": cmd, "data": data or {}}}
+
+    def _send(self, payload: dict, expect_reply: bool = False, timeout: float = 1.0, device: Optional[str] = None, sku: Optional[str] = None):
         """Send UDP packet with automatic retry on failure"""
         last_error = None
+        payload = self._with_device_info(payload, device=device, sku=sku)
         
         for attempt in range(self.retry_count + 1):
             try:
@@ -128,38 +151,44 @@ class GoveeLAN:
 
     def on(self):
         """Turn device ON"""
-        return self._send({"msg": {"cmd": "turn", "data": {"value": 1}}})
+        return self._send(self._wrap_msg("turn", {"value": 1}))
 
     def off(self):
         """Turn device OFF"""
-        return self._send({"msg": {"cmd": "turn", "data": {"value": 0}}})
+        return self._send(self._wrap_msg("turn", {"value": 0}))
 
     def brightness(self, v: int):
         """Set brightness (1-100)"""
         v = max(1, min(100, int(v)))
-        return self._send({"msg": {"cmd": "brightness", "data": {"value": v}}})
+        return self._send(self._wrap_msg("brightness", {"value": v}))
 
     def rgb(self, r: int, g: int, b: int):
         """Set RGB color (0-255 per channel)"""
         r = max(0, min(255, int(r)))
         g = max(0, min(255, int(g)))
         b = max(0, min(255, int(b)))
-        return self._send({"msg": {"cmd": "colorwc", "data": {"color": {"r": r, "g": g, "b": b}}}})
+        return self._send(self._wrap_msg("colorwc", {"color": {"r": r, "g": g, "b": b}}))
 
     def color_temp(self, kelvin: int):
         """Set color temperature (2000-6500K typical range)"""
         kelvin = max(1000, min(10000, int(kelvin)))
-        # Convert to 0-254 scale
-        ct_value = int((kelvin - 1000) / (10000 - 1000) * 254)
-        return self._send({"msg": {"cmd": "colorwc", "data": {"colorTemInKelvin": kelvin}}})
+        return self._send(self._wrap_msg("colorwc", {"colorTemInKelvin": kelvin}))
 
     def scene(self, scene_id: int):
         """Activate a scene (device-specific scene ID)"""
-        return self._send({"msg": {"cmd": "scene", "data": {"sceneId": scene_id}}})
+        return self._send(self._wrap_msg("scene", {"sceneId": scene_id}))
 
     def status(self):
         """Get device status (power, brightness, color, etc.)"""
-        return self._send({"msg": {"cmd": "devStatus", "data": {}}}, expect_reply=True)
+        return self._send(self._wrap_msg("devStatus", {}), expect_reply=True)
+
+    def send_command(self, cmd: str, data: Optional[dict] = None, expect_reply: bool = False, timeout: float = 1.0, device: Optional[str] = None, sku: Optional[str] = None):
+        """Send any Govee LAN API command with optional reply expectation."""
+        return self._send(self._wrap_msg(cmd, data), expect_reply=expect_reply, timeout=timeout, device=device, sku=sku)
+
+    def send_payload(self, payload: dict, expect_reply: bool = False, timeout: float = 1.0, device: Optional[str] = None, sku: Optional[str] = None):
+        """Send a pre-built LAN API payload (already contains msg)."""
+        return self._send(payload, expect_reply=expect_reply, timeout=timeout, device=device, sku=sku)
 
     def save_scene(self, name: str):
         """Save current state as a scene"""
@@ -384,6 +413,27 @@ def device_brightness():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
+@app.route("/api/device/color-temperature", methods=["POST", "OPTIONS"])
+def device_color_temperature():
+    if request.method == "OPTIONS":
+        return "", 200
+    try:
+        data = request.get_json(silent=True) or {}
+        ip = data.get("ip") or govee.ip
+        kelvin = data.get("value", 4000)
+        device = data.get("device")
+        sku = data.get("sku")
+        if ip:
+            govee.set_ip(ip)
+        if device or sku:
+            govee.set_device_info(device=device, sku=sku)
+        govee.color_temp(int(kelvin))
+        return jsonify({"status": "ok", "action": "color-temperature", "value": kelvin})
+    except Exception as e:
+        print(f"Error in device_color_temperature: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
 @app.route("/api/device/color", methods=["POST", "OPTIONS"])
 def device_color():
     if request.method == "OPTIONS":
@@ -407,6 +457,44 @@ def device_color():
         return jsonify({"status": "ok", "action": "color", "r": r, "g": g, "b": b})
     except Exception as e:
         print(f"Error in device_color: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+@app.route("/api/device/raw", methods=["POST", "OPTIONS"])
+def device_raw():
+    """Send an arbitrary Govee LAN payload for advanced API control."""
+    if request.method == "OPTIONS":
+        return "", 200
+    try:
+        data = request.get_json(silent=True) or {}
+        ip = data.get("ip") or govee.ip
+        cmd = data.get("cmd")
+        payload = data.get("payload")
+        expect_reply = bool(data.get("expect_reply", False))
+        timeout = float(data.get("timeout", 1.0))
+        device = data.get("device")
+        sku = data.get("sku")
+
+        if ip:
+            govee.set_ip(ip)
+        if device or sku:
+            govee.set_device_info(device=device, sku=sku)
+
+        if payload:
+            if not isinstance(payload, dict):
+                return jsonify({"status": "error", "message": "payload must be an object"}), 400
+            resp = govee.send_payload(payload, expect_reply=expect_reply, timeout=timeout, device=device, sku=sku)
+        else:
+            if not cmd:
+                return jsonify({"status": "error", "message": "cmd or payload is required"}), 400
+            msg_data = data.get("data") or {}
+            if not isinstance(msg_data, dict):
+                return jsonify({"status": "error", "message": "data must be an object"}), 400
+            resp = govee.send_command(cmd, msg_data, expect_reply=expect_reply, timeout=timeout, device=device, sku=sku)
+
+        return jsonify({"status": "ok", "response": resp, "ip": govee.ip})
+    except Exception as e:
+        print(f"Error in device_raw: {e}")
         return jsonify({"status": "error", "message": str(e)}), 400
 
 

@@ -7,6 +7,8 @@ const API_URL = 'http://localhost:5000/api';
 class GoveeAPI {
   constructor() {
     this.deviceIp = localStorage.getItem('deviceIp') || '192.168.1.66';
+    this.deviceId = localStorage.getItem('lanDeviceId') || '';
+    this.sku = localStorage.getItem('lanSku') || '';
     this.commandLog = [];
     this.onCommandSent = null; // callback for UI logging
   }
@@ -75,6 +77,20 @@ class GoveeAPI {
     localStorage.setItem('deviceIp', ip);
   }
 
+  setDeviceIdentity(deviceId = '', sku = '') {
+    this.deviceId = deviceId || '';
+    this.sku = sku || '';
+    localStorage.setItem('lanDeviceId', this.deviceId);
+    localStorage.setItem('lanSku', this.sku);
+  }
+
+  getDeviceIdentity() {
+    return {
+      device: this.deviceId || undefined,
+      sku: this.sku || undefined,
+    };
+  }
+
   isValidIp(ip) {
     const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
     if (!ipRegex.test(ip)) return false;
@@ -104,9 +120,53 @@ class GoveeAPI {
     return this.request('/device/color', 'POST', { r, g, b });
   }
 
+  async setColorTemperature(value, extra = {}) {
+    this.logCommand('colorwc', { colorTemInKelvin: value });
+    return this.request('/device/color-temperature', 'POST', {
+      value,
+      ...this.getDeviceIdentity(),
+      ...extra,
+    });
+  }
+
   async getDeviceStatus() {
     this.logCommand('devStatus', {});
     return this.request('/device/status', 'POST', {});
+  }
+
+  async sendLanCommand(cmd, data = {}, options = {}) {
+    const payload = {
+      cmd,
+      data,
+      expect_reply: options.expectReply ?? true,
+      timeout: options.timeout ?? 1.0,
+      ...this.getDeviceIdentity(),
+    };
+
+    if (options.device) payload.device = options.device;
+    if (options.sku) payload.sku = options.sku;
+
+    this.logCommand(cmd, data);
+    return this.request('/device/raw', 'POST', payload);
+  }
+
+  async sendLanPayload(payload, options = {}) {
+    if (!payload || typeof payload !== "object") {
+      throw new Error("payload must be an object");
+    }
+
+    const body = {
+      payload,
+      expect_reply: options.expectReply ?? true,
+      timeout: options.timeout ?? 1.0,
+      ...this.getDeviceIdentity(),
+    };
+
+    if (options.device) body.device = options.device;
+    if (options.sku) body.sku = options.sku;
+
+    this.logCommand(payload?.msg?.cmd || "custom", payload);
+    return this.request('/device/raw', 'POST', body);
   }
 
   // Rules/Automation
