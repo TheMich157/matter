@@ -298,6 +298,10 @@ rgbArrToHex(arr) {
     this.colorTempInput = document.getElementById("colorTempInput");
     this.applyTempBtn = document.getElementById("applyTempBtn");
 
+    // Official scene sender
+    this.sceneIdInput = document.getElementById("sceneIdInput");
+    this.applySceneBtn = document.getElementById("applySceneBtn");
+
     // Rules
     this.ruleTime = document.getElementById("ruleTime");
     this.ruleAction = document.getElementById("ruleAction");
@@ -467,6 +471,16 @@ rgbArrToHex(arr) {
       this.applyTempBtn.addEventListener("click", () => {
         const value = this.clampKelvin(parseInt(this.colorTempInput?.value || this.colorTempSlider?.value || this.lastColorTemp, 10));
         this.setColorTemperature(value);
+      });
+    }
+
+    // Scene sender
+    if (this.applySceneBtn) {
+      this.applySceneBtn.addEventListener("click", () => this.sendSceneId());
+    }
+    if (this.sceneIdInput) {
+      this.sceneIdInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") this.sendSceneId();
       });
     }
 
@@ -766,6 +780,26 @@ rgbArrToHex(arr) {
       this.log(`Color temperature → ${kelvin}K`);
     } catch (error) {
       this.log(`Color temperature error: ${error.message}`, "error");
+    }
+  }
+
+  async sendSceneId() {
+    if (!this.sceneIdInput) return;
+    const raw = this.sceneIdInput.value.trim();
+    const sceneId = parseInt(raw, 10);
+
+    if (!Number.isInteger(sceneId) || sceneId < 0) {
+      this.showErrorDialog("Invalid sceneId", "Enter a non-negative sceneId value from the Govee app.");
+      return;
+    }
+
+    try {
+      await api.sendScene(sceneId);
+      this.log(`Scene ID → ${sceneId}`);
+    } catch (error) {
+      const msg = error.message || String(error);
+      this.log(`Scene error: ${msg}`, "error");
+      this.showErrorDialog("Scene Failed", msg);
     }
   }
 
