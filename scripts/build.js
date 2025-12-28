@@ -16,18 +16,9 @@ const wantsAll = requestedPlatforms.includes("all");
 const resolvedPlatforms = wantsAll ? ["win", "mac", "linux"] : requestedPlatforms;
 const targets = new Map();
 
-function addPlatformTargets(platform) {
-  if (platform === Platform.WINDOWS) {
-    targets.set(Platform.WINDOWS, Platform.WINDOWS.createTarget(["nsis", "portable"]));
-    return;
-  }
-  if (platform === Platform.MAC) {
-    targets.set(Platform.MAC, Platform.MAC.createTarget(["dmg", "zip"]));
-    return;
-  }
-  if (platform === Platform.LINUX) {
-    targets.set(Platform.LINUX, Platform.LINUX.createTarget(["AppImage", "tar.gz"]));
-    return;
+function mergeTargets(targetMap) {
+  for (const [plat, archMap] of targetMap) {
+    targets.set(plat, archMap);
   }
 }
 
@@ -48,12 +39,16 @@ for (const entry of resolvedPlatforms) {
     console.warn(`[builder] Skipping ${plat.name} targets (unsupported on ${process.platform})`);
     continue;
   }
-  addPlatformTargets(plat);
+  if (plat === Platform.WINDOWS) mergeTargets(Platform.WINDOWS.createTarget(["nsis", "portable"]));
+  else if (plat === Platform.MAC) mergeTargets(Platform.MAC.createTarget(["dmg", "zip"]));
+  else if (plat === Platform.LINUX) mergeTargets(Platform.LINUX.createTarget(["AppImage", "tar.gz"]));
 }
 
 // Fallback to host-only if nothing was added (protect against empty env input)
 if (targets.size === 0) {
-  addPlatformTargets(hostPlatform);
+  if (hostPlatform === Platform.WINDOWS) mergeTargets(Platform.WINDOWS.createTarget(["nsis", "portable"]));
+  else if (hostPlatform === Platform.MAC) mergeTargets(Platform.MAC.createTarget(["dmg", "zip"]));
+  else mergeTargets(Platform.LINUX.createTarget(["AppImage", "tar.gz"]));
 }
 
 if (dryRun) {
